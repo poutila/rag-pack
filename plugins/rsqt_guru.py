@@ -3793,14 +3793,22 @@ class RsqtGuruPlugin(PackPlugin):
                     reasons.append("Parse error")
 
             # Deterministic post-processing for strict schema/validator compliance.
-            answer = _normalize_answer_for_validators(qid, answer or "", ctx.out_dir)
-            # Persist normalized answer back into chat artifact so downstream consumers
-            # (outside this plugin/report) see the same high-quality contract-compliant output.
+            answer_raw = answer or ""
+            answer_norm = _normalize_answer_for_validators(qid, answer_raw, ctx.out_dir)
+            answer = answer_norm
+
+            # Persist raw + normalized answers as separate fields (DO NOT overwrite stdout.answer).
             if chat_file.exists() and isinstance(chat_data, dict):
                 stdout_obj = chat_data.get("stdout")
                 if isinstance(stdout_obj, dict):
-                    if stdout_obj.get("answer", "") != answer:
-                        stdout_obj["answer"] = answer
+                    changed = False
+                    if not stdout_obj.get("_raw_answer"):
+                        stdout_obj["_raw_answer"] = answer_raw
+                        changed = True
+                    if stdout_obj.get("_normalized_answer") != answer_norm:
+                        stdout_obj["_normalized_answer"] = answer_norm
+                        changed = True
+                    if changed:
                         try:
                             chat_file.write_text(json.dumps(chat_data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
                         except Exception:

@@ -4516,14 +4516,21 @@ def _repair_answer_for_strict_contract(
         notes.append("repaired_citations")
 
     # Remove existing VERDICT/CITATIONS lines and rebuild with repaired header.
+    # Also drop banned standalone heading lines like "Analysis:" / "CITATIONS:" (including markdown variants).
     body_lines: List[str] = []
+    dropped_banned_headings = False
     for ln in clean.splitlines():
         s = ln.strip()
         if re.match(r"^\s*VERDICT\s*[=:]", s):
             continue
         if re.match(r"^\s*CITATIONS\s*[=:]?", s):
             continue
+        if re.match(r"(?i)^(?:#{1,6}\s*)?(?:\*{1,2}\s*)?(analysis|citations)(?:\s*\*{1,2})?\s*:\s*$", s):
+            dropped_banned_headings = True
+            continue
         body_lines.append(ln)
+    if dropped_banned_headings:
+        notes.append("dropped_banned_headings")
 
     repaired = "\n".join([
         f"VERDICT={verdict}",
@@ -6025,6 +6032,23 @@ def _run_single(
         )
 
         ans, sources = _extract_answer_and_sources(chat_json)
+        raw_ans = ans or ""
+
+        # Persist raw model answer alongside any repaired answer (debug/provenance SSOT).
+        raw_persisted = False
+        if isinstance(chat_json, dict):
+            if not chat_json.get("_raw_answer"):
+                chat_json["_raw_answer"] = raw_ans
+                raw_persisted = True
+        else:
+            chat_json = {"answer": raw_ans, "sources": sources, "_raw_answer": raw_ans}
+            raw_persisted = True
+        if raw_persisted:
+            write_json(
+                chat_file,
+                {"argv": chat_res.argv, "returncode": chat_res.returncode, "stdout": chat_json, "stderr": chat_res.stderr},
+            )
+
         if q.answer_mode == "llm" and strict_response_template:
             repaired_ans, repair_notes = _repair_answer_for_strict_contract(
                 qid=q.id,
@@ -6038,7 +6062,7 @@ def _run_single(
                 if isinstance(chat_json, dict):
                     chat_json["answer"] = ans
                 else:
-                    chat_json = {"answer": ans, "sources": sources}
+                    chat_json = {"answer": ans, "sources": sources, "_raw_answer": raw_ans}
                 write_json(
                     chat_file,
                     {"argv": chat_res.argv, "returncode": chat_res.returncode, "stdout": chat_json, "stderr": chat_res.stderr},
@@ -6057,7 +6081,7 @@ def _run_single(
                 if isinstance(chat_json, dict):
                     chat_json["answer"] = ans
                 else:
-                    chat_json = {"answer": ans, "sources": sources}
+                    chat_json = {"answer": ans, "sources": sources, "_raw_answer": raw_ans}
                 write_json(
                     chat_file,
                     {

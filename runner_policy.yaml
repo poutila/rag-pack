@@ -104,6 +104,15 @@ runner:
     top_p: 1.0
     chat_top_k_initial: 8
     preflight_max_chars: 1600
+
+  chat_defaults:
+    # Applied to every question unless overridden by question.chat in the pack YAML.
+    # This enables schema retries for models that occasionally emit "Analysis:" headers, extra CITATIONS lines, etc.
+    strict_response_template: |
+      VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+      CITATIONS=path:line(-line), path:line(-line), ...
+    retry_on_schema_fail: true
+    schema_retry_attempts: 2
   path_aliases:
     rust_audit_pack_general_v1_6.explicit.yaml: "pack_rust_audit_rsqt_general_v1_6_explicit.yaml"
     # legacy aliases (kept for backward compatibility)

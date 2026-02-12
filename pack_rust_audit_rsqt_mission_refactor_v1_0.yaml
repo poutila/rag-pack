@@ -1,0 +1,34 @@
+version: "1.0"
+pack_type: rust_audit_rsqt_mission_refactor
+engine: rsqt
+response_schema: key_value
+runner:
+  mission: true
+  advice_gate:
+    enabled: true
+    fatal: true
+  plugin: rsqt_guru
+  plugin_config:
+    question_validators_path: cfg_rust_audit_rsqt_mission_refactor_question_validators.yaml
+defaults:
+  chat_top_k: 8
+  max_tokens: 1024
+  temperature: 0.0
+validation:
+  required_verdicts: [TRUE_POSITIVE, FALSE_POSITIVE, INDETERMINATE]
+  citation_format: path:line(-line)
+  fail_on_missing_citations: true
+  apply_question_validators: true
+questions:
+  - id: R_MISSION_REFACTOR_PLAN_1
+    title: Mission refactor plan
+    category: refactor
+    answer_mode: deterministic
+    advice_mode: llm
+    question: |
+      VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+      CITATIONS=path:line(-line), ...
+      ISSUE_1=
+      WHY_IT_MATTERS_1=
+      PATCH_SKETCH_1=
+      TEST_PLAN_1=

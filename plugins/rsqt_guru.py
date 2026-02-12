@@ -2350,6 +2350,30 @@ def _normalize_r_doc_coverage_1(answer: str, out_dir: Path) -> str:
     return "\n".join(lines).strip() + "\n"
 
 
+
+
+def _token_is_covered_by_prompt_ranges(tok: str, prompt_tokens: List[str], prompt_token_set: set[str]) -> bool:
+    if not tok:
+        return False
+    if tok in prompt_token_set:
+        return True
+    m = re.match(r"^(?P<path>[^:]+):(?P<line>\d+)$", str(tok).strip())
+    if not m:
+        return False
+    tpath = m.group("path")
+    tline = int(m.group("line"))
+    for pt in prompt_tokens:
+        mr = re.match(r"^(?P<path>[^:]+):(?P<a>\d+)-(?P<b>\d+)$", str(pt).strip())
+        if not mr:
+            continue
+        if mr.group("path") != tpath:
+            continue
+        a = int(mr.group("a")); b=int(mr.group("b"))
+        lo=min(a,b); hi=max(a,b)
+        if lo <= tline <= hi:
+            return True
+    return False
+
 def _normalize_r_doc_undoc_1(answer: str, out_dir: Path) -> str:
     clean = _drop_banned_heading_lines(_strip_markdown_bold(answer or ""))
     mv = _VERDICT_RE.search(clean)
@@ -2418,7 +2442,7 @@ def _normalize_r_doc_undoc_1(answer: str, out_dir: Path) -> str:
             if _is_test_code_path(fp):
                 continue
             tok = f"{fp}:{ln}"
-            if tok in prompt_token_set:
+            if _token_is_covered_by_prompt_ranges(tok, prompt_tokens, prompt_token_set):
                 fallback_anchor = tok
                 break
 
@@ -2432,7 +2456,7 @@ def _normalize_r_doc_undoc_1(answer: str, out_dir: Path) -> str:
             fp = str(e.get("file_path") or "").strip()
             ln = int(e.get("line_start") or 1)
             tok = f"{fp}:{ln}" if fp else ""
-            if tok and tok in prompt_token_set:
+            if tok and _token_is_covered_by_prompt_ranges(tok, prompt_tokens, prompt_token_set):
                 cands.append(tok)
         if fallback_anchor:
             cands.append(fallback_anchor)
@@ -2452,7 +2476,7 @@ def _normalize_r_doc_undoc_1(answer: str, out_dir: Path) -> str:
         fp = str(e.get("file_path") or "").strip()
         ln = int(e.get("line_start") or 1)
         tok = f"{fp}:{ln}" if fp else ""
-        if not tok or (prompt_token_set and tok not in prompt_token_set):
+        if not tok or (prompt_token_set and not _token_is_covered_by_prompt_ranges(tok, prompt_tokens, prompt_token_set)):
             tok = fallback_anchor or "R_DOC_UNDOC_1_doc_analysis.json:1"
         sig = _compact_ws(str(e.get("signature") or e.get("symbol_name") or "item"), max_len=140)
         body_lines.append(f"{i}. {sig} - {tok} - undocumented (doc.has_doc=false)")
@@ -2499,7 +2523,7 @@ def _normalize_r_doc_match_1(answer: str, out_dir: Path) -> str:
             fp = str(e.get("file_path") or "").strip()
             ln = int(e.get("line_start") or 1)
             tok = f"{fp}:{ln}" if fp else ""
-            if tok and (not prompt_token_set or tok in prompt_token_set):
+            if tok and (not prompt_token_set or _token_is_covered_by_prompt_ranges(tok, prompt_tokens, prompt_token_set)):
                 cands.append(tok)
         citations = _dedupe_preserve(cands)
 
@@ -2510,7 +2534,7 @@ def _normalize_r_doc_match_1(answer: str, out_dir: Path) -> str:
         fp = str(e.get("file_path") or "").strip()
         ln = int(e.get("line_start") or 1)
         tok = f"{fp}:{ln}" if fp else ""
-        if not tok or (prompt_token_set and tok not in prompt_token_set):
+        if not tok or (prompt_token_set and not _token_is_covered_by_prompt_ranges(tok, prompt_tokens, prompt_token_set)):
             tok = fallback_tok
         sig = _compact_ws(str(e.get("signature") or "").replace("|", "/"), max_len=120)
         d = e.get("doc") if isinstance(e.get("doc"), dict) else {}
@@ -3905,7 +3929,11 @@ class RsqtGuruPlugin(PackPlugin):
                 for msg in runner_issues_by_q.get(qid, [])
                 if str(msg or "").strip()
             ]
-            reasons.extend(runner_contract_issues)
+            filtered_runner_issues = [
+                msg for msg in runner_contract_issues
+                if _runner_issue_still_applies(msg, answer=answer or "", validation=ctx.pack.validation)
+            ]
+            reasons.extend(filtered_runner_issues)
 
             # Stable de-dup of reason strings.
             if reasons:

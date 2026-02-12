@@ -180,6 +180,14 @@ DEFAULT_RUNNER_POLICY: Dict[str, Any] = {
             "chat_top_k_initial": 8,
             "preflight_max_chars": 1600,
         },
+        "chat_defaults": {
+            "strict_response_template": (
+                "VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE\n"
+                "CITATIONS=path:line(-line), path:line(-line), ..."
+            ),
+            "retry_on_schema_fail": True,
+            "schema_retry_attempts": 2,
+        },
         "path_aliases": {
             "rust_audit_pack_general_v1_6.explicit.yaml": "pack_rust_audit_rsqt_general_v1_6_explicit.yaml",
             "rust_audit_extension_4q.yaml": "pack_rust_audit_rsqt_extension_4q.yaml",
@@ -594,6 +602,7 @@ PACK_VALIDATION_FALLBACK: Dict[str, Any] = dict(_policy_get("pack_validation", {
 QUESTION_ANSWER_MODES = tuple(str(x) for x in (_policy_get("question_modes.answer", ["llm", "deterministic"]) or ["llm", "deterministic"]))
 QUESTION_ADVICE_MODES = tuple(str(x) for x in (_policy_get("question_modes.advice", ["none", "llm"]) or ["none", "llm"]))
 ENGINE_DEFAULTS: Dict[str, Any] = dict(_policy_get("engine_defaults", {}))
+RUNNER_CHAT_DEFAULTS: Dict[str, Any] = dict(_policy_get("runner.chat_defaults", {}) or {})
 
 QUESTION_VALIDATORS_DEFAULT_FILENAME = str(_policy_get("validators.question_validators_default_filename", "cfg_rust_audit_rsqt_general_question_validators.yaml"))
 _CITATION_TOKEN_PATTERN = str(_policy_get("validators.citation_token_regex", r"(?:(?:file|path):)?[A-Za-z0-9_./\-]+:\d+(?:-\d+)?"))
@@ -1764,6 +1773,13 @@ def _parse_pack(obj: Dict[str, Any]) -> Pack:
                 f"(expected one of {list(QUESTION_ADVICE_MODES)})"
             )
 
+        chat_cfg = q.get("chat") if isinstance(q.get("chat"), dict) else {}
+        if RUNNER_CHAT_DEFAULTS:
+            merged = dict(RUNNER_CHAT_DEFAULTS)
+            merged.update(chat_cfg)
+            chat_cfg = merged
+        chat_cfg = chat_cfg if isinstance(chat_cfg, dict) and chat_cfg else None
+
         questions.append(Question(
             id=str(q["id"]),
             title=str(q["title"]),
@@ -1771,7 +1787,7 @@ def _parse_pack(obj: Dict[str, Any]) -> Pack:
             question=str(q["question"]),
             top_k=int(q["top_k"]) if q.get("top_k") is not None else None,
             preflight=q.get("preflight") if isinstance(q.get("preflight"), list) else None,
-            chat=q.get("chat") if isinstance(q.get("chat"), dict) else None,
+            chat=chat_cfg,
             expected_verdict=str(q["expected_verdict"]) if q.get("expected_verdict") else None,
             answer_mode=answer_mode,
             advice_mode=advice_mode,
@@ -2340,9 +2356,11 @@ def validate_path_gates(
 
     cited_tokens = _extract_answer_citation_tokens(answer)
     cited_paths = {t.split(":", 1)[0] for t in cited_tokens if ":" in t}
+    cited_paths = {p for p in cited_paths if p and not _is_runner_generated_artifact_path(p)}
 
     body = _strip_schema_header_lines(answer)
     mentioned_paths = set(_FILE_PATH_RE.findall(body))
+    mentioned_paths = {p for p in mentioned_paths if p and not _is_runner_generated_artifact_path(p)}
 
     # Gate A: referenced paths must exist in evidence-derived allowed paths
     if validation.enforce_no_new_paths:
@@ -2862,7 +2880,15 @@ def _extract_numbered_issue_blocks(advice_text: str) -> Dict[int, Dict[str, str]
 
 
 def _parse_citations_value(raw: str) -> List[str]:
-    parts = [p.strip() for p in str(raw or "").split(",") if p.strip()]
+    s = str(raw or "").strip()
+    if not s:
+        return []
+    # Primary format is comma-separated. If commas are absent, accept whitespace/semicolon separators
+    # to reduce brittle advice failures.
+    if "," in s:
+        parts = [p.strip() for p in s.split(",") if p.strip()]
+    else:
+        parts = [p.strip() for p in re.split(r"[;\s]+", s) if p.strip()]
     out: List[str] = []
     for p in parts:
         nt = _normalize_citation_token_for_provenance(p)
@@ -4532,7 +4558,20 @@ def _build_advice_prompt(
     deterministic_answer: str,
     evidence_blocks: List[str],
 ) -> str:
-    evidence = "\n\n".join(evidence_blocks) if evidence_blocks else str(PROMPT_ADVICE.get("no_evidence_text", "(no evidence blocks available)"))
+    evidence = "\n\n".join(evidence_blocks) if evidence_blocks else str(
+        PROMPT_ADVICE.get("no_evidence_text", "(no evidence blocks available)")
+    )
+
+    allowed_tokens = sorted(_extract_allowed_citation_tokens(evidence_blocks))
+    allow_cap = int(PROMPT_ADVICE.get("allowed_citations_cap", 60))
+    allow_cap = max(0, allow_cap)
+    allowed_tokens = allowed_tokens[:allow_cap] if allow_cap else allowed_tokens
+    allowed_line = ", ".join(allowed_tokens) if allowed_tokens else ""
+
+    allowed_header = str(
+        PROMPT_ADVICE.get("allowed_citations_header", "ALLOWED_CITATIONS (copy/paste ONLY; do not invent)")
+    ).rstrip(":")
+
     advice_text_template = str(
         PROMPT_ADVICE.get(
             "text",
@@ -4545,27 +4584,33 @@ def _build_advice_prompt(
                 "WHY_IT_MATTERS_1=...\n"
                 "PATCH_SKETCH_1=...\n"
                 "TEST_PLAN_1=...\n"
-                "CITATIONS_1=<copy citation tokens from evidence, e.g. crates/engine/src/store.rs:25-30>\n"
+                "CITATIONS_1=path:line(-line), path:line(-line)  (must be copied from ALLOWED_CITATIONS)\n"
                 "ISSUE_2=... (optional)\n"
                 "WHY_IT_MATTERS_2=... (optional)\n"
                 "PATCH_SKETCH_2=... (optional)\n"
                 "TEST_PLAN_2=... (optional)\n"
-                "CITATIONS_2=<copy citation tokens from evidence> (optional)\n"
+                "CITATIONS_2=... (optional; same rules)\n"
                 "ISSUE_3=... (optional)\n"
                 "WHY_IT_MATTERS_3=... (optional)\n"
                 "PATCH_SKETCH_3=... (optional)\n"
                 "TEST_PLAN_3=... (optional)\n"
-                "CITATIONS_3=<copy citation tokens from evidence> (optional)\n\n"
+                "CITATIONS_3=... (optional; same rules)\n\n"
                 "RULES:\n"
                 "- Max 3 issues.\n"
                 "- Prefer Rust-idiomatic suggestions (error conversions, trait boundaries, async/thread safety, testing seams).\n"
-                "- CITATIONS_n must be copied verbatim from evidence tokens (look for lines starting with \"CITE=\"); do NOT invent tokens.\n"
-                "- Every issue must include at least one such citation token.\n"
+                "- CITATIONS_n must be repo-relative tokens of the form path:line or path:start-end (or artifact anchors like *.json:1).\n"
+                "- CITATIONS_n must be copied verbatim from ALLOWED_CITATIONS. Do NOT cite symbol forms like path::fn_name.\n"
+                "- Every included issue must have at least one citation token.\n"
                 "- If evidence is insufficient for an issue, do not include that issue.\n\n"
             ),
         )
     )
     template_with_sep = advice_text_template.rstrip() + "\n\n"
+
+    allowed_section = ""
+    if allowed_line:
+        allowed_section = f"{allowed_header}:\n{allowed_line}\n\n"
+
     return (
         template_with_sep
         + f"QUESTION_ID={qid}\n\n"
@@ -4573,6 +4618,7 @@ def _build_advice_prompt(
         + f"{question_text}\n\n"
         + "DETERMINISTIC AUDIT ANSWER:\n"
         + f"{deterministic_answer}\n\n"
+        + allowed_section
         + "EVIDENCE:\n"
         + f"{evidence}\n"
     )
@@ -5312,7 +5358,15 @@ def _run_single(
                 stdout_data = art_data.get("stdout")
                 stdout_already_filtered = bool(art_data.get("_stdout_filtered"))
                 _learn_runtime_keys_from_payload(stdout_data)
-                if not _nonempty_stdout(stdout_data):
+                # IMPORTANT:
+                # When preflight output was filtered-to-zero, stdout may be "empty"
+                # but we must still inject a deterministic "0 results" evidence block
+                # so citation provenance can remain evidence-backed.
+                pre_filter_count_hint = _safe_int(art_data.get("_stdout_rows_before_filter_count"), 0)
+                post_filter_count_hint = _safe_int(art_data.get("_stdout_rows_after_filter_count"), -1)
+                filtered_to_zero_hint = bool(stdout_data.get("_stdout_filtered_to_zero")) if isinstance(stdout_data, dict) else False
+                filtered_to_zero_artifact = bool(art_data.get("_stdout_filtered")) and pre_filter_count_hint > 0 and post_filter_count_hint == 0
+                if (not _nonempty_stdout(stdout_data)) and not (filtered_to_zero_hint or filtered_to_zero_artifact):
                     continue
 
                 # ---------------------------------------------------------
@@ -5323,7 +5377,7 @@ def _run_single(
                 # summary counts from the full JSON to give stable facts.
                 # Fields are explicitly *_shown to prevent repo-global claims.
                 # ---------------------------------------------------------
-                if name == "doc_analysis" and isinstance(stdout_data, dict):
+                if name == "doc_analysis" and isinstance(stdout_data, dict) and _has_preflight_hits(stdout_data):
                     cite_tok = f"{q.id}_{name}.json:1"
                     ents = stdout_data.get("entities")
                     mods = stdout_data.get("module_docs")

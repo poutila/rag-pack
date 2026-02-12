@@ -36,7 +36,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 
-from core.validation import validate_response_schema as shared_validate_response_schema
+from core.validation import (
+    extract_required_keys_from_contract,
+    validate_required_key_lines,
+    validate_response_schema as shared_validate_response_schema,
+)
 
 # Ensure script directory is in sys.path for plugin imports
 _SCRIPT_DIR = Path(__file__).parent.resolve()
@@ -531,6 +535,7 @@ DEFAULT_ENGINE_SPECS_FILE = str(_policy_get("runner.defaults.engine_specs_file",
 DEFAULT_SYSTEM_PROMPT_FILE = str(_policy_get("runner.defaults.system_prompt_file", "prompts/RUST_GURU_SYSTEM.md"))
 DEFAULT_GROUNDING_PROMPT_FILE = str(_policy_get("runner.defaults.grounding_prompt_file", "prompts/RUST_GURU_GROUNDING.md"))
 DEFAULT_ANALYZE_PROMPT_FILE = str(_policy_get("runner.defaults.analyze_prompt_file", "prompts/RUST_GURU_ANALYZE_ONLY.md"))
+DEFAULT_ADVICE_PROMPT_FILE = str(_policy_get("runner.defaults.advice_prompt_file", "prompts/RUST_GURU_ADVICE.md"))
 DEFAULT_OUT_DIR_NAME = str(_policy_get("runner.defaults.out_dir_name", "xref_state"))
 DEFAULT_OUT_DIR_TIMESTAMP_FORMAT = str(_policy_get("runner.defaults.out_dir_timestamp_format", "%y%m%d_%H:%M:%S"))
 DEFAULT_OUT_DIR_INCLUDE_MODEL = bool(_policy_get("runner.defaults.out_dir_include_model", True))
@@ -570,6 +575,8 @@ except Exception:
     ADVICE_RETRY_ISSUE_BULLETS = 8
 ADVICE_RETRY_ISSUE_BULLETS = max(1, ADVICE_RETRY_ISSUE_BULLETS)
 ADVICE_MIN_CONCRETE_ISSUES = int(_policy_get("runner.advice_quality_gate.min_concrete_issues_when_evidence", 2))
+ADVICE_MIN_CONCRETE_ISSUES_RULES = list(_policy_get("runner.advice_quality_gate.min_concrete_issues_rules", []) or [])
+ADVICE_RETRIEVAL_CITATIONS_ENABLED = bool(_policy_get("runner.advice_quality_gate.advice_retrieval_citations_enabled", False))
 ADVICE_MIN_ISSUE_WORDS = int(_policy_get("runner.advice_quality_gate.min_issue_words", 4))
 ADVICE_REQUIRED_FIELDS = tuple(
     str(x).strip().upper()
@@ -2827,6 +2834,44 @@ def _write_question_evidence_audit(out_dir: Path, qid: str, audit: Dict[str, Any
 # Mission advice quality gates
 # =============================================================================
 
+
+def _resolve_is_mission_pack(*, pack: "Pack", pack_path: Path) -> tuple[bool, str]:
+    runner = pack.runner if isinstance(pack.runner, dict) else {}
+    if isinstance(runner.get("mission"), bool):
+        return bool(runner.get("mission")), "runner.mission"
+    if _is_mission_pack_type(pack.pack_type):
+        return True, "pack_type"
+    if "_mission_" in pack_path.name.lower():
+        return True, "filename"
+    return False, "default"
+
+
+def _resolve_apply_question_validators(*, pack: "Pack", is_mission_pack: bool) -> tuple[bool, str]:
+    if isinstance(pack.runner, dict) and "apply_question_validators" in pack.runner:
+        return bool(pack.runner.get("apply_question_validators")), "pack.runner.apply_question_validators"
+    if "apply_question_validators" in (pack.validation.__dict__ if hasattr(pack.validation, "__dict__") else {}):
+        if pack.validation.apply_question_validators:
+            return True, "pack.validation.apply_question_validators"
+    if is_mission_pack:
+        return True, "mission_default"
+    return bool(PACK_VALIDATION_FALLBACK.get("apply_question_validators", False)), "runner_policy.pack_validation.apply_question_validators"
+
+
+def _resolve_min_concrete_issues(pack_type: str) -> int:
+    for rule in ADVICE_MIN_CONCRETE_ISSUES_RULES:
+        if not isinstance(rule, dict):
+            continue
+        rx = str(rule.get("pack_type_regex") or "").strip()
+        val = rule.get("min_concrete_issues")
+        if not rx:
+            continue
+        try:
+            if re.search(rx, str(pack_type or ""), flags=re.IGNORECASE):
+                return max(0, int(val))
+        except Exception:
+            continue
+    return max(0, int(ADVICE_MIN_CONCRETE_ISSUES))
+
 def _is_mission_pack_type(pack_type: str) -> bool:
     if not ADVICE_GATE_ENABLED:
         return False
@@ -2901,6 +2946,7 @@ def _validate_advice_quality(
     *,
     advice_text: str,
     evidence_blocks: List[str],
+    min_concrete_issues_when_evidence: int,
 ) -> List[str]:
     issues: List[str] = []
     text = str(advice_text or "").strip()
@@ -2956,9 +3002,10 @@ def _validate_advice_quality(
         issues.append("Advice is praise-only or generic across all issues")
 
     # Require minimum issue count only when citeable evidence tokens exist.
-    if allowed and concrete_issue_count < max(1, ADVICE_MIN_CONCRETE_ISSUES):
+    min_required = max(0, int(min_concrete_issues_when_evidence))
+    if allowed and concrete_issue_count < min_required:
         issues.append(
-            f"Advice must provide at least {max(1, ADVICE_MIN_CONCRETE_ISSUES)} concrete issues when citeable evidence exists (found {concrete_issue_count})"
+            f"Advice must provide at least {min_required} concrete issues when citeable evidence exists (found {concrete_issue_count})"
         )
 
     return issues
@@ -4851,11 +4898,16 @@ def _run_single(
         analyze_prompt=str(prompt_analyze) if prompt_analyze else "(none)",
     )
 
+    # Resolve mission/validator modes before any config loading that depends on them.
+    is_mission_pack, mission_source = _resolve_is_mission_pack(pack=pack, pack_path=pack_path)
+    mission_advice_gate_enabled = is_mission_pack
+    qv_enabled, qv_source = _resolve_apply_question_validators(pack=pack, is_mission_pack=is_mission_pack)
+
     # SSOT: load default test-path patterns once per run from validator YAML
     default_test_path_patterns = _load_default_test_path_patterns(pack, pack_path)
     question_validators_cfg = (
         _load_question_validators_cfg(pack, pack_path)
-        if pack.validation.apply_question_validators
+        if qv_enabled
         else None
     )
 
@@ -4916,8 +4968,9 @@ def _run_single(
 
     fatal_contract_issues: List[str] = []
     fatal_advice_gate_issues: List[str] = []
-    mission_advice_gate_enabled = _is_mission_pack_type(pack.pack_type)
     report_lines.append(f"mission_advice_gate_enabled={mission_advice_gate_enabled}\n")
+    report_lines.append(f"is_mission_pack={is_mission_pack} source={mission_source}\n")
+    report_lines.append(f"apply_question_validators={qv_enabled} source={qv_source}\n")
 
     if PREFLIGHT_CORPUS_SCOPE_GATE_ENABLED:
         forbidden_patterns = _coerce_transform_regex_list(PREFLIGHT_CORPUS_SCOPE_FORBIDDEN_REGEX)
@@ -5657,6 +5710,8 @@ def _run_single(
 
         def _compute_schema_issues_local(answer_text: str) -> List[str]:
             issues_local = validate_response_schema(answer_text or "", pack.validation)
+            required_keys = extract_required_keys_from_contract(strict_response_template)
+            issues_local.extend(validate_required_key_lines(answer_text or "", required_keys))
             if pack.validation.enforce_citations_from_evidence:
                 allowed = allowed_citations_by_q.get(q.id, set())
                 provenance_issues = validate_citations_from_evidence(answer_text or "", allowed=allowed)
@@ -6112,7 +6167,7 @@ def _run_single(
                 report_lines.append(f"- {sources}\n")
 
         schema_issues = _compute_schema_issues_local(ans or "")
-        if pack.validation.apply_question_validators and ans and question_validators_cfg:
+        if qv_enabled and ans and question_validators_cfg:
             qv_issues = _apply_question_validators(
                 qid=q.id,
                 answer_text=ans or "",
@@ -6183,9 +6238,10 @@ def _run_single(
                         )
 
                 advice_top_k_cap = int(ISSUE_CAPS.get("advice_top_k_cap", 8))
-                advice_top_k = int((q.chat or {}).get("advice_top_k", min(advice_top_k_cap, top_k_max)))
-                advice_top_k = max(1, advice_top_k)
-                advice_prompt_file = prompt_grounding or prompt_analyze
+                default_advice_top_k = 0 if not ADVICE_RETRIEVAL_CITATIONS_ENABLED else min(advice_top_k_cap, top_k_max)
+                advice_top_k = int((q.chat or {}).get("advice_top_k", default_advice_top_k))
+                advice_top_k = max(0, advice_top_k)
+                advice_prompt_file = Path(DEFAULT_ADVICE_PROMPT_FILE) if Path(DEFAULT_ADVICE_PROMPT_FILE).exists() else (prompt_grounding or prompt_analyze)
                 _log_event(
                     logging.INFO,
                     "question.advice.prepare",
@@ -6276,9 +6332,11 @@ def _run_single(
                 else:
                     advice_text = str(advice_json or "")
 
+                advice_min_issues = _resolve_min_concrete_issues(pack.pack_type)
                 advice_quality_issues = _validate_advice_quality(
                     advice_text=advice_text,
                     evidence_blocks=evidence_blocks,
+                    min_concrete_issues_when_evidence=advice_min_issues,
                 )
                 advice_retry_attempts = (
                     ADVICE_RETRY_ATTEMPTS
@@ -6397,6 +6455,7 @@ def _run_single(
                     advice_quality_issues = _validate_advice_quality(
                         advice_text=advice_text,
                         evidence_blocks=evidence_blocks,
+                        min_concrete_issues_when_evidence=advice_min_issues,
                     )
 
                 if advice_text.strip():

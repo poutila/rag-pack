@@ -1,0 +1,4 @@
+version: "1.0"
+validators:
+  R_MISSION_REFACTOR_PLAN_1:
+    required_keys: [ISSUE_1, WHY_IT_MATTERS_1, PATCH_SKETCH_1, TEST_PLAN_1, CITATIONS_1]

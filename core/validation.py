@@ -3,6 +3,41 @@ import re
 from typing import Any, List
 
 
+def extract_required_keys_from_contract(text: str) -> List[str]:
+    keys: List[str] = []
+    seen: set[str] = set()
+    for ln in (text or "").splitlines():
+        m = re.match(r"^\s*([A-Z][A-Z0-9_]*)\s*=", ln.strip())
+        if not m:
+            continue
+        key = m.group(1).strip().upper()
+        if key in {"VERDICT", "CITATIONS"}:
+            continue
+        if key in seen:
+            continue
+        seen.add(key)
+        keys.append(key)
+    return keys
+
+
+def validate_required_key_lines(answer: str, keys: List[str]) -> List[str]:
+    issues: List[str] = []
+    if not keys:
+        return issues
+    lines = [ln.strip() for ln in (answer or "").splitlines() if ln.strip()]
+    values: dict[str, str] = {}
+    for ln in lines:
+        m = re.match(r"^\s*([A-Z][A-Z0-9_]*)\s*=\s*(.*?)\s*$", ln)
+        if not m:
+            continue
+        values[m.group(1).upper()] = (m.group(2) or "").strip()
+    for key in keys:
+        val = values.get(key, "")
+        if not val or val.upper() in {"NONE", "N/A", "NA", "UNKNOWN", "TBD", "MISSING", "..."}:
+            issues.append(f"Missing required key line: {key}=")
+    return issues
+
+
 def validate_response_schema(answer: str, validation: Any, issue_caps: dict[str, Any] | None = None) -> List[str]:
     issues: List[str] = []
     required_verdicts = set(getattr(validation, 'required_verdicts', []) or [])

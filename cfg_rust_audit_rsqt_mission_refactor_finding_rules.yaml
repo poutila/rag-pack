@@ -1,0 +1,4 @@
+version: "1.0"
+rules:
+  - id: REFACTOR_SEQUENCE_REQUIRED
+    severity: HIGH

@@ -1,0 +1,334 @@
+version: 1.0.0
+pack_type: rust_audit_rsqt_mission_addon_part1
+engine: rsqt
+response_schema: 'MANDATORY FIRST LINES (must be first two lines):
+
+  VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+
+  CITATIONS=path:line(-line), path:line(-line), ...
+
+
+  Policy:
+
+  - If a claim cannot be proven from extracted evidence, set VERDICT=INDETERMINATE.
+
+  - Use deterministic evidence only; no speculation.
+
+  - Mission context: prioritize manned Mars orbiter reliability and safe refactoring
+  readiness.'
+defaults:
+  chat_top_k: 12
+  max_tokens: 2200
+  temperature: 0.0
+questions:
+- id: R_MISSION_OPS_1
+  title: Index Regeneration and Baseline Health Contract
+  category: mission_ops
+  top_k: 8
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'Validate RSQT index regeneration and baseline health signals for a mission-critical
+    refactor kickoff.
+
+
+    Required output lines:
+
+    INDEX_REGEN_FULL=OK|FAIL|INSUFFICIENT
+
+    INDEX_REGEN_INCREMENTAL=OK|FAIL|INSUFFICIENT
+
+    STATS_FILE_COUNT=<integer or INSUFFICIENT>
+
+    STATS_TOTAL_LINES=<integer or INSUFFICIENT>
+
+    PROFILE_CI_RESOLVED_PATHS=YES|NO|INSUFFICIENT
+
+
+    Rules:
+
+    - Use only evidence from preflight artifacts.
+
+    - If values cannot be read from evidence, use INSUFFICIENT.'
+  preflight:
+  - name: regen_full
+    cmd:
+    - generate
+    - --full
+  - name: regen_incremental
+    cmd:
+    - generate
+  - name: stats_json
+    cmd:
+    - stats
+    - --format
+    - json
+  - name: stats_profile_ci
+    cmd:
+    - --profile
+    - ci
+    - stats
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+- id: R_MISSION_OPS_2
+  title: Schema and Column Contract Freeze
+  category: mission_ops
+  top_k: 8
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'Extract the machine-facing schema and column contract that refactor changes
+    must preserve.
+
+
+    Required output lines:
+
+    SCHEMA_REGISTRY_COMMANDS=<integer or INSUFFICIENT>
+
+    COLUMNS_COUNT=<integer or INSUFFICIENT>
+
+    MISSING_REQUIRED_COLUMNS=<comma-separated names or NONE or INSUFFICIENT>
+
+
+    Required required-column set:
+
+    file_path,total_lines,source_text,entity_kind,line_start,line_end,has_unsafe'
+  preflight:
+  - name: schemas_json
+    cmd:
+    - schemas
+    - --format
+    - json
+  - name: columns_json
+    cmd:
+    - columns
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+- id: R_MISSION_OPS_3
+  title: Snapshot Export and Rollback Evidence
+  category: mission_ops
+  top_k: 8
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'Confirm that the full index can be exported for rollback/diff workflows
+    during high-risk refactors.
+
+
+    Required output lines:
+
+    DUMP_EXECUTED=YES|NO|INSUFFICIENT
+
+    DUMP_JSON_ARRAY=YES|NO|INSUFFICIENT
+
+    DUMP_SAMPLE_ROW_PRESENT=YES|NO|INSUFFICIENT
+
+
+    Use evidence from `dump` output and cite artifact tokens.'
+  preflight:
+  - name: dump_stdout
+    cmd:
+    - dump
+    render: lines
+    block_max_chars: 7000
+  - name: stats_json
+    cmd:
+    - stats
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+- id: R_MISSION_FIND_1
+  title: Deterministic Safety Findings Stream
+  category: mission_findings
+  top_k: 10
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'Build a deterministic findings summary from rsqt audit outputs.
+
+
+    Required output lines:
+
+    AUDIT_ROWS_TOTAL=<integer or INSUFFICIENT>
+
+    HIGH_PLUS_ROWS=<integer or INSUFFICIENT>
+
+    DOC_RULE_ROWS=<integer or INSUFFICIENT>
+
+    UNSAFE_RULE_ROWS=<integer or INSUFFICIENT>
+
+    CRITICAL_RULES_PRESENT=YES|NO|INSUFFICIENT
+
+
+    Rules:
+
+    - Derive counts from audit artifacts only.
+
+    - No invented totals.'
+  preflight:
+  - name: audit_all_jsonl
+    cmd:
+    - audit
+    render: lines
+    block_max_chars: 8000
+  - name: audit_high_jsonl
+    cmd:
+    - audit
+    - --min-severity
+    - HIGH
+    render: lines
+    block_max_chars: 8000
+  - name: audit_doc_jsonl
+    cmd:
+    - audit
+    - --rule-prefix
+    - DOC_
+    render: lines
+    block_max_chars: 8000
+  - name: audit_unsafe_jsonl
+    cmd:
+    - audit
+    - --rule-prefix
+    - UNSAFE_
+    render: lines
+    block_max_chars: 8000
+  expected_verdict: TRUE_POSITIVE
+- id: R_MISSION_FIND_2
+  title: Documentation Findings Stream
+  category: mission_findings
+  top_k: 10
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'Summarize deterministic documentation findings relevant to refactor safety.
+
+
+    Required output lines:
+
+    DOC_FINDINGS_ROWS=<integer or INSUFFICIENT>
+
+    DOC_PUB_MISSING_PRESENT=YES|NO|INSUFFICIENT
+
+    DOC_MODULE_DOC_MISSING_PRESENT=YES|NO|INSUFFICIENT
+
+
+    Prefer evidence from doc-findings output lines.'
+  preflight:
+  - name: doc_findings_jsonl
+    cmd:
+    - doc-findings
+    render: lines
+    block_max_chars: 8000
+  expected_verdict: TRUE_POSITIVE
+- id: R_MISSION_CLI_1
+  title: CLI Contract Snapshot for Change Control
+  category: cli_contract
+  top_k: 8
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'Capture the generated CLI contract reference used for operator runbooks
+    and CI change tracking.
+
+
+    Required output lines:
+
+    CLI_REFERENCE_GENERATED=YES|NO|INSUFFICIENT
+
+    CLI_COMMAND_COUNT=<integer or INSUFFICIENT>
+
+    CLI_GLOBAL_FLAGS=<comma-separated flags or INSUFFICIENT>
+
+
+    Use `cli-reference` artifact only.'
+  preflight:
+  - name: cli_reference_md
+    cmd:
+    - cli-reference
+    - --date
+    - '2026-02-11'
+    render: lines
+    block_max_chars: 9000
+  expected_verdict: TRUE_POSITIVE
+- id: R_MISSION_CLI_2
+  title: CLI Help Quality Audit
+  category: cli_contract
+  top_k: 8
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'Evaluate operator-facing CLI help quality for mission operations.
+
+
+    Required output lines:
+
+    CLI_HELP_AUDIT_STATUS=PASS|WARN|FAIL|INSUFFICIENT
+
+    CLI_HELP_FINDINGS_COUNT=<integer or INSUFFICIENT>
+
+
+    Use summary and json evidence from cli-help-audit.'
+  preflight:
+  - name: cli_help_summary
+    cmd:
+    - cli-help-audit
+    - --format
+    - summary
+    render: lines
+    block_max_chars: 7000
+  - name: cli_help_json
+    cmd:
+    - cli-help-audit
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+- id: R_MISSION_SAFE_1
+  title: Production Unwrap/Expect Contract
+  category: safety
+  top_k: 10
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'Quantify production unwrap/expect risk for manned Mars orbiter reliability
+    constraints.
+
+
+    Required output lines:
+
+    PROD_UNWRAP_FILES=<integer or INSUFFICIENT>
+
+    PROD_EXPECT_FILES=<integer or INSUFFICIENT>
+
+    TEST_ONLY_UNWRAPS=YES|NO|INSUFFICIENT
+
+    HEURISTIC_WARNINGS_PRESENT=YES|NO|INSUFFICIENT
+
+
+    Rules:
+
+    - Use `prod-unwraps` outputs only.
+
+    - Distinguish production-only vs include-tests mode.'
+  preflight:
+  - name: prod_unwraps_json
+    cmd:
+    - prod-unwraps
+    - --format
+    - json
+  - name: prod_unwraps_include_tests_json
+    cmd:
+    - prod-unwraps
+    - --include-tests
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+validation:
+  required_verdicts:
+  - TRUE_POSITIVE
+  - FALSE_POSITIVE
+  - INDETERMINATE
+  citation_format: path:line(-line)
+  fail_on_missing_citations: true
+  enforce_citations_from_evidence: true
+  enforce_no_new_paths: true
+  enforce_paths_must_be_cited: true
+  minimum_questions: 8
+runner:
+  plugin: rsqt_guru
+  plugin_config:
+    rules_path: cfg_rust_audit_rsqt_mission_addon_finding_rules.yaml
+    question_validators_path: cfg_rust_audit_rsqt_mission_addon_question_validators.yaml

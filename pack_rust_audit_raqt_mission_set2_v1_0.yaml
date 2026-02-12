@@ -1,0 +1,442 @@
+version: 1.0.0
+pack_type: rust_audit_raqt_mission_set2
+engine: raqt
+response_schema: 'MANDATORY FIRST LINES (must be first two lines):
+
+  VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+
+  CITATIONS=repo/path.rs:line(-line), repo/path.rs:line(-line), ...
+
+
+  Policy:
+
+  - If a claim cannot be proven from extracted evidence, set VERDICT=INDETERMINATE.
+
+  - Prefer deterministic extraction evidence; do not speculate.
+
+  - Do not add markdown section headers.'
+defaults:
+  chat_top_k: 12
+  max_tokens: 2500
+  temperature: 0.0
+questions:
+- id: R_MISSION_RUNTIME_1
+  title: RAQT Runtime and Contract Readiness
+  category: tooling
+  top_k: 10
+  answer_mode: llm
+  advice_mode: llm
+  question: 'You are validating whether RAQT runtime behavior is suitable for safety-critical refactor planning.
+
+
+    Required output lines (exactly once each):
+
+    TRUST_GATE_DOC=YES|NO|INSUFFICIENT
+
+    DOCTOR_STATUS=PASS|WARN|FAIL|INSUFFICIENT
+
+    STRICT_JSON_MODE=OK|BROKEN|INSUFFICIENT
+
+    PROFILE_CI_MODE=ACCEPTED|REJECTED|INSUFFICIENT
+
+    FAIL_ON_STALE_FLAG=ACCEPTED|REJECTED|INSUFFICIENT
+
+    KIND_ALIAS_FN_FUNCTION=YES|NO|INSUFFICIENT
+
+    SCHEMA_COLUMNS=<integer or INSUFFICIENT>
+
+    STAT_NUM_ROWS=<integer or INSUFFICIENT>
+
+
+    Then add short bullet list:
+
+    - RUNTIME_BLOCKER_1=...
+
+    - RUNTIME_BLOCKER_2=... (optional)'
+  chat:
+    retry_on_schema_fail: true
+    schema_retry_attempts: 2
+    strict_response_template: 'VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+
+      CITATIONS=<comma-separated evidence tokens from CITE= lines only>
+
+      TRUST_GATE_DOC=YES|NO|INSUFFICIENT
+
+      DOCTOR_STATUS=PASS|WARN|FAIL|INSUFFICIENT
+
+      STRICT_JSON_MODE=OK|BROKEN|INSUFFICIENT
+
+      PROFILE_CI_MODE=ACCEPTED|REJECTED|INSUFFICIENT
+
+      FAIL_ON_STALE_FLAG=ACCEPTED|REJECTED|INSUFFICIENT
+
+      KIND_ALIAS_FN_FUNCTION=YES|NO|INSUFFICIENT
+
+      SCHEMA_COLUMNS=<integer or INSUFFICIENT>
+
+      STAT_NUM_ROWS=<integer or INSUFFICIENT>
+
+      RUNTIME_BLOCKER_1=<short blocker or NONE>
+
+      RUNTIME_BLOCKER_2=<short blocker or NONE>'
+  preflight:
+  - name: raqt_cli_reference
+    cmd:
+    - cli-reference
+    - --date
+    - '2026-02-11'
+    render: lines
+    block_max_chars: 7000
+  - name: raqt_generate_help
+    cmd:
+    - generate
+    - --help
+    render: lines
+    block_max_chars: 5000
+  - name: raqt_doctor_json
+    cmd:
+    - doctor
+    - --format
+    - json
+  - name: raqt_kinds_json
+    cmd:
+    - kinds
+    - --format
+    - json
+  - name: raqt_stats_json
+    cmd:
+    - stats
+    - --format
+    - json
+  - name: raqt_schema_json
+    cmd:
+    - schema
+    - --format
+    - json
+  - name: raqt_strict_json_stats
+    cmd:
+    - --strict-json
+    - stats
+    - --format
+    - json
+    render: lines
+    block_max_chars: 5000
+  - name: raqt_profile_ci_doctor
+    cmd:
+    - --profile
+    - ci
+    - doctor
+    - --format
+    - json
+  - name: raqt_fail_on_stale_stats
+    cmd:
+    - --fail-on-stale
+    - stats
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+- id: R_MISSION_CALLGRAPH_1
+  title: Callgraph and Coupling Hotspots
+  category: architecture
+  top_k: 12
+  answer_mode: llm
+  advice_mode: llm
+  question: 'Build a coupling map for refactor planning using callgraph and refs evidence.
+
+
+    Required output lines:
+
+    EDGE_ROWS=<integer or INSUFFICIENT>
+
+    SELF_EDGES_PRESENT=YES|NO|UNKNOWN
+
+    TOP_CALLERS=<comma-separated symbol/path items or NONE>
+
+    TOP_CALLEES=<comma-separated symbol/path items or NONE>
+
+    REFACTOR_BOUNDARY_CANDIDATES=<comma-separated module/path items or NONE>
+
+
+    Rules:
+
+    - Prefer non-test production paths.
+
+    - Cite each top caller/callee claim.
+
+    - Return plain text only.
+
+    - Output VERDICT first and CITATIONS second, then emit each required key exactly once.'
+  chat:
+    retry_on_schema_fail: true
+    schema_retry_attempts: 2
+    strict_response_template: 'VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+
+      CITATIONS=<comma-separated evidence tokens from CITE= lines only>
+
+      EDGE_ROWS=<integer or INSUFFICIENT>
+
+      SELF_EDGES_PRESENT=YES|NO|UNKNOWN
+
+      TOP_CALLERS=<comma-separated symbol/path items or NONE>
+
+      TOP_CALLEES=<comma-separated symbol/path items or NONE>
+
+      REFACTOR_BOUNDARY_CANDIDATES=<comma-separated module/path items or NONE>'
+  preflight:
+  - name: mission_defs_functions
+    cmd:
+    - defs
+    - --kind
+    - function
+    - --limit
+    - '650'
+    - --format
+    - json
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      exclude_test_files: true
+      max_items: 200
+      max_chars: 9000
+  - name: mission_refs_all
+    cmd:
+    - refs
+    - --limit
+    - '900'
+    - --format
+    - json
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      exclude_test_files: true
+      max_items: 240
+      max_chars: 9000
+  - name: mission_callgraph_all
+    cmd:
+    - callgraph
+    - --limit
+    - '900'
+    - --format
+    - json
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      exclude_test_files: true
+      max_items: 240
+      max_chars: 9000
+  - name: mission_callgraph_self
+    cmd:
+    - callgraph
+    - --include-self
+    - --limit
+    - '900'
+    - --format
+    - json
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      exclude_test_files: true
+      max_items: 240
+      max_chars: 9000
+  - name: mission_kinds_json
+    cmd:
+    - kinds
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+- id: R_MISSION_SAFETY_1
+  title: Safety and Supply-Chain Exposure Surface
+  category: safety
+  top_k: 12
+  answer_mode: llm
+  advice_mode: llm
+  question: 'Build a safety exposure inventory focused on panic/unwrap/unsafe/ffi/build tooling risks.
+
+
+    Required output lines:
+
+    UNSAFE_SURFACE=NONE|LOW|MEDIUM|HIGH|INSUFFICIENT
+
+    FFI_SURFACE=NONE|LOW|MEDIUM|HIGH|INSUFFICIENT
+
+    PROD_PANIC_SURFACE=NONE|LOW|MEDIUM|HIGH|INSUFFICIENT
+
+    PROD_UNWRAP_SURFACE=NONE|LOW|MEDIUM|HIGH|INSUFFICIENT
+
+    SUPPLY_CHAIN_RISK=LOW|MEDIUM|HIGH|INSUFFICIENT
+
+    SAFETY_GATE_1=...
+
+    SAFETY_GATE_2=...'
+  chat:
+    retry_on_schema_fail: true
+    schema_retry_attempts: 2
+    strict_response_template: 'VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+
+      CITATIONS=<comma-separated evidence tokens from CITE= lines only>
+
+      UNSAFE_SURFACE=NONE|LOW|MEDIUM|HIGH|INSUFFICIENT
+
+      FFI_SURFACE=NONE|LOW|MEDIUM|HIGH|INSUFFICIENT
+
+      PROD_PANIC_SURFACE=NONE|LOW|MEDIUM|HIGH|INSUFFICIENT
+
+      PROD_UNWRAP_SURFACE=NONE|LOW|MEDIUM|HIGH|INSUFFICIENT
+
+      SUPPLY_CHAIN_RISK=LOW|MEDIUM|HIGH|INSUFFICIENT
+
+      SAFETY_GATE_1=<short gate or INSUFFICIENT>
+
+      SAFETY_GATE_2=<short gate or INSUFFICIENT>'
+  preflight:
+  - name: unsafe_inventory
+    engine_override: rsqt
+    cmd:
+    - search
+    - unsafe
+    - --limit
+    - '200'
+    - --format
+    - json
+    render: lines
+    block_max_chars: 7000
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      exclude_test_files: true
+      exclude_comments: true
+      max_items: 80
+  - name: ffi_inventory
+    engine_override: rsqt
+    cmd:
+    - search
+    - extern "C"
+    - --limit
+    - '120'
+    - --format
+    - json
+    render: lines
+    block_max_chars: 7000
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      exclude_test_files: true
+      exclude_comments: true
+      max_items: 80
+  - name: prod_unwrap_inventory
+    engine_override: rsqt
+    cmd:
+    - search
+    - .unwrap(
+    - --limit
+    - '220'
+    - --format
+    - json
+    render: lines
+    block_max_chars: 7000
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      exclude_test_files: true
+      exclude_comments: true
+      max_items: 80
+  - name: panic_inventory
+    engine_override: rsqt
+    cmd:
+    - search
+    - panic!(
+    - --limit
+    - '200'
+    - --format
+    - json
+    render: lines
+    block_max_chars: 7000
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      exclude_test_files: true
+      exclude_comments: true
+      max_items: 80
+  - name: build_rs_inventory
+    engine_override: rsqt
+    cmd:
+    - search
+    - build.rs
+    - --limit
+    - '80'
+    - --format
+    - json
+    render: lines
+    block_max_chars: 5000
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      - (^|/)build\.rs$
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      exclude_test_files: true
+      exclude_comments: true
+      max_items: 40
+  - name: proc_macro_inventory
+    engine_override: rsqt
+    cmd:
+    - search
+    - proc-macro = true
+    - --limit
+    - '80'
+    - --format
+    - json
+    render: lines
+    block_max_chars: 5000
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      - (^|/)Cargo\.toml$
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      exclude_test_files: true
+      exclude_comments: true
+      max_items: 40
+  expected_verdict: TRUE_POSITIVE
+validation:
+  required_verdicts:
+  - TRUE_POSITIVE
+  - FALSE_POSITIVE
+  - INDETERMINATE
+  citation_format: path:line(-line)
+  fail_on_missing_citations: true
+  enforce_citations_from_evidence: true
+  enforce_no_new_paths: true
+  enforce_paths_must_be_cited: true
+  minimum_questions: 3
+runner:
+  plugin: rsqt_guru
+  plugin_config:
+    rules_path: cfg_rust_audit_raqt_mission_finding_rules.yaml
+    question_validators_path: cfg_rust_audit_raqt_mission_question_validators.yaml

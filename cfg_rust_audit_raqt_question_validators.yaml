@@ -1,0 +1,184 @@
+defaults:
+  test_path_patterns:
+  - (^|/)(tests)(/|$)
+  - (^|/)(testdata|fixtures)(/|$)
+  - (^|/)[^/]*_tests?\.rs$
+  - (^|/)test_[^/]+\.rs$
+
+validators:
+  R_BOUNDARY_1:
+  # --- Schema enforcement ---
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_BOUNDARY_1: Missing/invalid VERDICT line (must be TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_BOUNDARY_1: Missing CITATIONS line with at least one path:line token'
+  # --- If body mentions repo file paths, require real file:line citation tokens ---
+  - type: require_min_inline_regex_count_if_regex
+    if_regex: '(?i)\b(?:crates?|engine|cli|gui)/[A-Za-z0-9_./-]+\.(?:rs|toml|md|ya?ml|json)\b'
+    regex: '(?m)^\s*\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*.*(?:(?:file:)?[A-Za-z0-9_.-]+/[A-Za-z0-9_./-]+\.(?:rs|toml|md|ya?ml|json):\d+(?:-\d+)?).*'
+    min_count: 1
+    message: 'R_BOUNDARY_1: body mentions repo paths; CITATIONS must include at least one real path:line token (not only artifact anchors)'
+  # --- Non-test citation gate ---
+  - type: require_non_test_fileline_citations_if_regex
+    trigger_regex: (?i)(impl\s+From<)|(From<.*Error)|(cross.crate)|(error.*propagat)
+    message_no_citations: 'R_BOUNDARY_1: claims cross-crate error propagation but provides
+      no path:line citations'
+    message_all_test: 'R_BOUNDARY_1: error propagation citations are all in test paths;
+      must cite production code paths'
+    test_path_patterns:
+    - ^tests/
+    - /tests/
+    - _test\.rs$
+    - _tests\.rs$
+  # --- Depth: must list at least 2 impl From< patterns (evidence has 3) ---
+  - type: require_min_inline_regex_count
+    regex: '(?i)impl\s+From<'
+    min_count: 2
+    message: 'R_BOUNDARY_1: must enumerate at least 2 "impl From<" entries from evidence (lazy summary detected)'
+  # --- Output contract: explicit boundary verdict lines ---
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*ENGINE_TO_CLI_FROM\s*=\s*(YES|NO|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_BOUNDARY_1: missing ENGINE_TO_CLI_FROM=YES|NO|INSUFFICIENT output-contract line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*ENGINE_TO_GUI_FROM\s*=\s*(YES|NO|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_BOUNDARY_1: missing ENGINE_TO_GUI_FROM=YES|NO|INSUFFICIENT output-contract line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*MISSING_BOUNDARIES\s*=\s*(.+|NONE)\s*$'
+    min_count: 1
+    message: 'R_BOUNDARY_1: missing MISSING_BOUNDARIES=<...|NONE> output-contract line'
+  # --- Depth: must explicitly answer engine→cli and engine→gui boundaries ---
+  - type: require_min_inline_regex_count
+    regex: '(?i)(engine.{0,5}cli|cli.{0,10}(CliError|missing|NO\b|lacks))'
+    min_count: 1
+    message: 'R_BOUNDARY_1: must explicitly address the engine→cli boundary (From<Error> for CliError present or missing?)'
+  - type: require_min_inline_regex_count
+    regex: '(?i)(engine.{0,5}gui|CommandError|gui.{0,10}(command|From))'
+    min_count: 1
+    message: 'R_BOUNDARY_1: must explicitly address the engine→gui boundary (From<Error> for CommandError)'
+  # --- Hard ban: no markdown headers ---
+  - type: ban_regex
+    regex: '(?im)^\s*\*{0,2}(analysis|citations)\*{0,2}\s*:'
+    message: 'R_BOUNDARY_1: contains banned markdown headers (**Analysis:** or **CITATIONS:**) — use plain text only'
+
+  R_PORTS_1:
+  # --- Schema enforcement ---
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_PORTS_1: Missing/invalid VERDICT line (must be TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_PORTS_1: Missing CITATIONS line with at least one path:line token'
+  # --- If body mentions repo file paths, require real file:line citation tokens ---
+  - type: require_min_inline_regex_count_if_regex
+    if_regex: '(?i)\b(?:crates?|engine|cli|gui)/[A-Za-z0-9_./-]+\.(?:rs|toml|md|ya?ml|json)\b'
+    regex: '(?m)^\s*\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*.*(?:(?:file:)?[A-Za-z0-9_.-]+/[A-Za-z0-9_./-]+\.(?:rs|toml|md|ya?ml|json):\d+(?:-\d+)?).*'
+    min_count: 1
+    message: 'R_PORTS_1: body mentions repo paths; CITATIONS must include at least one real path:line token (not only artifact anchors)'
+  # --- Non-test citation gate ---
+  - type: require_non_test_fileline_citations_if_regex
+    trigger_regex: (?i)(Box<dyn)|(impl\s+\w+\s+for)|(trait\s+\w+)|(DI|dependency.injection)|(port)|(fake|mock)
+    message_no_citations: 'R_PORTS_1: claims DI port or trait implementation patterns but
+      provides no path:line citations'
+    message_all_test: 'R_PORTS_1: DI port citations are all in test paths; must cite
+      production trait definitions'
+    test_path_patterns:
+    - ^tests/
+    - /tests/
+    - _test\.rs$
+    - _tests\.rs$
+  # --- Depth: must name at least 3 of the 5 production port traits ---
+  - type: require_min_inline_regex_count
+    regex: '(?i)\b(ConfigStore|ProcessCtl|LockProvider|RunIdGen|CancelToken)\b'
+    min_count: 3
+    message: 'R_PORTS_1: must name at least 3 port traits by name (evidence has ConfigStore, ProcessCtl, LockProvider, RunIdGen, CancelToken)'
+  # --- Depth: must include RATING= line ---
+  - type: require_min_inline_regex_count
+    regex: '(?i)RATING\s*=\s*(FULLY_TESTABLE|MOSTLY_TESTABLE|GAPS_EXIST)'
+    min_count: 1
+    message: 'R_PORTS_1: must include RATING=FULLY_TESTABLE|MOSTLY_TESTABLE|GAPS_EXIST assessment'
+  # --- Depth: must classify at least one impl as REAL/FAKE/TEST ---
+  - type: require_min_inline_regex_count
+    regex: '(?i)\b(REAL|FAKE|TEST)\b'
+    min_count: 2
+    message: 'R_PORTS_1: must classify impls using REAL/FAKE/TEST labels (at least 2 occurrences)'
+  # --- Hard ban: no markdown headers ---
+  - type: ban_regex
+    regex: '(?im)^\s*\*{0,2}(analysis|citations)\*{0,2}\s*:'
+    message: 'R_PORTS_1: contains banned markdown headers (**Analysis:** or **CITATIONS:**) — use plain text only'
+
+  R_TRAIT_1:
+  # --- Schema enforcement ---
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_TRAIT_1: Missing/invalid VERDICT line (must be TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_TRAIT_1: Missing CITATIONS line with at least one path:line token'
+  # --- If body mentions repo file paths, require real file:line citation tokens ---
+  - type: require_min_inline_regex_count_if_regex
+    if_regex: '(?i)\b(?:crates?|engine|cli|gui)/[A-Za-z0-9_./-]+\.(?:rs|toml|md|ya?ml|json)\b'
+    regex: '(?m)^\s*\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*.*(?:(?:file:)?[A-Za-z0-9_.-]+/[A-Za-z0-9_./-]+\.(?:rs|toml|md|ya?ml|json):\d+(?:-\d+)?).*'
+    min_count: 1
+    message: 'R_TRAIT_1: body mentions repo paths; CITATIONS must include at least one real path:line token (not only artifact anchors)'
+  # --- Non-test citation gate ---
+  - type: require_non_test_fileline_citations_if_regex
+    trigger_regex: (?i)(#\[derive)|(impl\s+Debug)|(impl\s+Clone)|(impl\s+Display)|(impl\s+Default)|(Serialize|Deserialize)
+    message_no_citations: 'R_TRAIT_1: claims trait implementations or derive usage but
+      provides no path:line citations'
+    message_all_test: 'R_TRAIT_1: trait citations are all in test paths; must cite
+      production type definitions'
+    test_path_patterns:
+    - ^tests/
+    - /tests/
+    - _test\.rs$
+    - _tests\.rs$
+  # --- Depth: must mention Debug at least 3 times (inventory + gaps + assessment) ---
+  - type: require_min_inline_regex_count
+    regex: '(?i)\bDebug\b'
+    min_count: 3
+    message: 'R_TRAIT_1: must discuss Debug implementations in detail (inventory, gaps, and assessment — at least 3 mentions)'
+  # --- Depth: must mention Display at least 2 times (for error type coverage) ---
+  - type: require_min_inline_regex_count
+    regex: '(?i)(\bDisplay\b|ERROR_DISPLAY_GAPS|DISPLAY_IMPL_INVENTORY)'
+    min_count: 2
+    message: 'R_TRAIT_1: must discuss Display implementations (error types need Display — at least 2 mentions)'
+  # --- Depth: must include RATING= line ---
+  - type: require_min_inline_regex_count
+    regex: '(?i)RATING\s*=\s*(COMPLETE|MOSTLY_COMPLETE|GAPS_EXIST)'
+    min_count: 1
+    message: 'R_TRAIT_1: must include RATING=COMPLETE|MOSTLY_COMPLETE|GAPS_EXIST assessment'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*DEBUG_COVERAGE\s*=\s*\d+\s*/\s*\d+\s*$'
+    min_count: 1
+    message: 'R_TRAIT_1: missing DEBUG_COVERAGE=<N>/<M> output-contract line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*DISPLAY_IMPL_INVENTORY\s*=\s*.+$'
+    min_count: 1
+    message: 'R_TRAIT_1: missing DISPLAY_IMPL_INVENTORY=<...|NONE> output-contract line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*ERROR_DISPLAY_GAPS\s*=\s*.+$'
+    min_count: 1
+    message: 'R_TRAIT_1: missing ERROR_DISPLAY_GAPS=<...|NONE> output-contract line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*CONFIG_DEFAULT_GAPS\s*=\s*.+$'
+    min_count: 1
+    message: 'R_TRAIT_1: missing CONFIG_DEFAULT_GAPS=<...|NONE> output-contract line'
+  # --- Depth: must give a concrete count ("N of M" or "N/M" or "N out of") ---
+  - type: require_min_inline_regex_count
+    regex: '(?i)(\d+\s+(of|out of|/)\s+\d+|\d+/\d+)'
+    min_count: 1
+    message: 'R_TRAIT_1: must give concrete counts (e.g., "N of M public types have Debug") — no vague summaries'
+  # --- Hard ban: no markdown headers ---
+  - type: ban_regex
+    regex: '(?im)^\s*\*{0,2}(analysis|citations)\*{0,2}\s*:'
+    message: 'R_TRAIT_1: contains banned markdown headers (**Analysis:** or **CITATIONS:**) — use plain text only'

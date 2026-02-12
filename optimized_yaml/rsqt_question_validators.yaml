@@ -1,0 +1,54 @@
+defaults:
+  test_path_patterns:
+  - (^|/)(tests)(/|$)
+  - (^|/)(testdata|fixtures)(/|$)
+  - (^|/)[^/]*_tests?\.rs$
+  - (^|/)test_[^/]+\.rs$
+validators:
+  R_SAFE_3:
+  - type: require_non_test_fileline_citations_if_regex
+    trigger_regex: (?i)(\.unwrap\(|\.expect\()|(production.*(unwrap|expect))
+    clean_outcome_regex: (?i)(no production (unwrap|expect)|all.*(unwrap|expect).*(test|cfg.test))
+    message_no_citations: 'R_SAFE_3: claims production unwrap/expect but provides no file:line citations'
+    message_all_test: 'R_SAFE_3: unwrap/expect citations are all in test paths; must cite non-test paths or report clean outcome'
+  - type: require_min_inline_regex_count_if_regex
+    if_regex: (?i)(no production|all.*(unwrap|expect).*(test|cfg\.test)|only test)
+    regex: (?i)(?![A-Za-z0-9_.\-/]*/tests/)[A-Za-z0-9_.\-/]+\.rs:\d+|R_SAFE_3_(?:unwrap_hits|expect_hits)\.json(?::\d+(?:-\d+)?)?
+    min_count: 1
+    message: 'R_SAFE_3: if claiming clean/only-tests, must cite at least one evidence location (non-test .rs:line or R_SAFE_3_*_hits.json[:line])'
+  R_API_3:
+  - type: require_min_inline_regex_count
+    regex: pub use\s+[^;]+;
+    min_count: 3
+    message: 'R_API_3: missing inline pub use list (expected ≥3 `pub use ...;` statements)'
+  R_META_1:
+  - type: require_min_inline_regex_count
+    regex: (?i)(?:[A-Za-z0-9_.-]+/)+Cargo\.toml
+    min_count: 2
+    message: 'R_META_1: must list at least 2 concrete Cargo.toml paths (with directory segments), not placeholders'
+  - type: require_min_inline_regex_count
+    regex: (?i)(?:[A-Za-z0-9_.-]+/)*Cargo\.lock
+    min_count: 1
+    message: 'R_META_1: must mention Cargo.lock path/token from evidence'
+  - type: require_min_inline_regex_count
+    regex: (?i)(?:[A-Za-z0-9_.-]+/)*rust-toolchain\.toml
+    min_count: 1
+    message: 'R_META_1: must mention rust-toolchain.toml path/token from evidence'
+  R_DOC_COVERAGE_1:
+  - type: require_min_inline_regex_count
+    regex: R_DOC_COVERAGE_1_doc_analysis\.json:1
+    min_count: 1
+    message: 'R_DOC_COVERAGE_1: must cite doc_analysis artifact token (expected R_DOC_COVERAGE_1_doc_analysis.json:1)'
+  - type: require_min_inline_regex_count
+    regex: (?i)\bDOC_SUMMARY\b
+    min_count: 1
+    message: 'R_DOC_COVERAGE_1: must reference DOC_SUMMARY counts in the answer'
+  R_DOC_UNDOC_1:
+  - type: require_min_inline_regex_count
+    regex: R_DOC_UNDOC_1_doc_analysis\.json:1
+    min_count: 1
+    message: 'R_DOC_UNDOC_1: must cite doc_analysis artifact token (expected R_DOC_UNDOC_1_doc_analysis.json:1)'
+  - type: require_min_inline_regex_count
+    regex: (?i)(?![A-Za-z0-9_.\-/]*/tests/)[A-Za-z0-9_.\-/]+\.rs:\d+
+    min_count: 1
+    message: 'R_DOC_UNDOC_1: must include at least one non-test .rs:line citation (exclude /tests/)'

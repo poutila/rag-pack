@@ -1,0 +1,503 @@
+version: 1.1.0
+pack_type: docs_audit
+engine: mdparse
+response_schema: '--- REQUIRED OUTPUT FORMAT ---
+
+  MANDATORY FIRST LINES (must be the first two lines of your response; copy exactly):
+
+  VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+
+  CITATIONS=path:line(-line), path:line(-line), ...
+
+
+  After those two lines, write the answer body.
+
+
+  Hard bans:
+
+  - Do NOT output Markdown section headers like "Analysis:" or "CITATIONS:".
+
+  - Do NOT invent line numbers or file paths. Only cite tokens that appear in the evidence.
+
+  - Do NOT include VERDICT or CITATIONS anywhere else in the body.
+
+
+  Policy:
+
+  - XREF_WORKFLOW_II INTENT: Validate docs-code alignment and docs-skeleton compatibility.
+
+  - SSOT precedence: docs/internal/BRAVE_PROF_RUST_SPEC.md > other docs/internal/ > docs/ship/
+
+  - If a claim cannot be proven from indexed corpus, set VERDICT=INDETERMINATE.
+
+  - Prefer deterministic extraction evidence; do NOT speculate.
+
+  '
+defaults:
+  chat_top_k: 12
+  max_tokens: 2000
+  temperature: 0.0
+questions:
+- id: D_SSOT_1
+  title: SSOT Document Identification
+  category: governance
+  advice_mode: llm
+  question: |
+    RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+    According to docs/internal/BRAVE_PROF_RUST_SPEC.md (§0 SSOT & Compatibility),
+    which document is the SSOT for the Rust workspace and what is the precedence order?
+    Summarize in 3 bullets.
+  preflight:
+  - name: ssot_section
+    cmd:
+    - search
+    - SSOT
+    - --limit
+    - '30'
+    - --format
+    - json
+- id: D_SSOT_2
+  title: Documentation Audience Split
+  category: governance
+  advice_mode: llm
+  question: |
+    RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+    According to docs/README.md, how should docs/ship vs docs/internal be treated?
+    Specify the intended audience and purpose for each.
+  preflight:
+  - name: readme_hits
+    cmd:
+    - search
+    - 'docs/ship'
+    - --limit
+    - '30'
+    - --format
+    - json
+  - name: audience_hits
+    cmd:
+    - search
+    - audience
+    - --limit
+    - '30'
+    - --format
+    - json
+- id: D_SSOT_3
+  title: Contributing Guidelines
+  category: governance
+  advice_mode: llm
+  question: |
+    RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+    According to docs/internal/CONTRIBUTING.md, what is the required process for:
+    1. Adding new documentation
+    2. Updating existing documentation
+    3. Resolving doc→code drift
+  preflight:
+  - name: contributing_hits
+    cmd:
+    - search
+    - contributing
+    - --limit
+    - '30'
+    - --format
+    - json
+  - name: drift_hits
+    cmd:
+    - search
+    - drift
+    - --limit
+    - '30'
+    - --format
+    - json
+- id: D_SAFE_1
+  title: Unsafe Code Policy
+  category: safety_policy
+  advice_mode: llm
+  question: |
+    RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+    According to docs/internal/PORTING_TO_RUST_15_PATTERNS.md, what is the policy for:
+    - unsafe_code lint (deny/allow/warn)
+    - Required SAFETY comments
+    - Audit process for unsafe blocks
+  preflight:
+  - name: unsafe_policy
+    cmd:
+    - search
+    - unsafe
+    - --limit
+    - '40'
+    - --format
+    - json
+  - name: safety_comment_policy
+    cmd:
+    - search
+    - SAFETY
+    - --limit
+    - '30'
+    - --format
+    - json
+- id: D_SAFE_2
+  title: Unwrap/Expect Policy
+  category: safety_policy
+  advice_mode: llm
+  question: |
+    RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+    According to docs/internal/PORTING_TO_RUST_15_PATTERNS.md, what are the rules for:
+    - unwrap_used lint
+    - expect_used lint
+    - When is panic acceptable in production code?
+  preflight:
+  - name: unwrap_policy
+    cmd:
+    - search
+    - unwrap
+    - --limit
+    - '40'
+    - --format
+    - json
+  - name: panic_policy
+    cmd:
+    - search
+    - panic
+    - --limit
+    - '30'
+    - --format
+    - json
+- id: D_SAFE_3
+  title: Error Handling Policy
+  category: safety_policy
+  advice_mode: llm
+  question: |
+    RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+    According to the SSOT spec, what is the error handling architecture?
+    - What error types should crates expose?
+    - How should errors propagate between crates?
+    - What are the error code conventions (BP_* prefixes)?
+  preflight:
+  - name: error_handling
+    cmd:
+    - search
+    - error handling
+    - --limit
+    - '40'
+    - --format
+    - json
+  - name: error_codes
+    cmd:
+    - search
+    - 'BP_'
+    - --limit
+    - '30'
+    - --format
+    - json
+- id: D_API_1
+  title: Public API Documentation
+  category: api_docs
+  advice_mode: llm
+  question: |
+    RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+    According to docs/internal/CONTRIBUTING.md or the SSOT spec,
+    what documentation is required for public APIs?
+    - Doc comment requirements
+    - Example code requirements
+    - Panic/safety documentation
+  preflight:
+  - name: api_doc_policy
+    cmd:
+    - search
+    - 'public API'
+    - --limit
+    - '30'
+    - --format
+    - json
+  - name: doc_comment_policy
+    cmd:
+    - search
+    - 'doc comment'
+    - --limit
+    - '30'
+    - --format
+    - json
+- id: D_API_2
+  title: CLI Documentation
+  category: api_docs
+  advice_mode: llm
+  question: |
+    RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+    According to docs/ship/CLI.md or docs/internal/, what CLI commands
+    should be documented? List the expected commands and their documentation requirements.
+  preflight:
+  - name: cli_docs
+    cmd:
+    - search
+    - CLI
+    - --limit
+    - '40'
+    - --format
+    - json
+- id: D_API_3
+  title: Configuration Documentation
+  category: api_docs
+  advice_mode: llm
+  question: |
+    RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+    According to docs/ship/CONFIGURATION.md, what configuration options
+    should be documented? List environment variables and config file formats.
+  preflight:
+  - name: config_docs
+    cmd:
+    - search
+    - configuration
+    - --limit
+    - '40'
+    - --format
+    - json
+  - name: env_var_docs
+    cmd:
+    - search
+    - environment
+    - --limit
+    - '30'
+    - --format
+    - json
+- id: D_ARCH_1
+  title: Crate Architecture
+  category: architecture
+  advice_mode: llm
+  question: |
+    RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+    According to docs/internal/ARCHITECTURE.md or the SSOT spec,
+    what is the expected crate structure? List:
+    - Expected crates and their purposes
+    - Dependency relationships
+    - Public API boundaries
+  preflight:
+  - name: architecture_hits
+    cmd:
+    - search
+    - architecture
+    - --limit
+    - '40'
+    - --format
+    - json
+  - name: crate_structure
+    cmd:
+    - search
+    - crate
+    - --limit
+    - '40'
+    - --format
+    - json
+- id: D_ARCH_2
+  title: Feature Flags Documentation
+  category: architecture
+  advice_mode: llm
+  question: |
+    RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+    According to the documentation, what Cargo feature flags should exist?
+    For each feature:
+    - What does it enable?
+    - Is it documented in docs/ship/?
+  preflight:
+  - name: feature_flags
+    cmd:
+    - search
+    - feature
+    - --limit
+    - '40'
+    - --format
+    - json
+- id: D_TEST_1
+  title: Test Requirements
+  category: testing
+  advice_mode: llm
+  question: |
+    RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+    According to docs/internal/TESTING.md or the SSOT spec,
+    what testing requirements apply?
+    - Unit test coverage requirements
+    - Integration test requirements
+    - Test documentation requirements
+  preflight:
+  - name: testing_policy
+    cmd:
+    - search
+    - testing
+    - --limit
+    - '40'
+    - --format
+    - json
+  - name: coverage_policy
+    cmd:
+    - search
+    - coverage
+    - --limit
+    - '30'
+    - --format
+    - json
+- id: D_TEST_2
+  title: Test Categories
+  category: testing
+  advice_mode: llm
+  question: |
+    RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+    According to the documentation, what test categories should exist?
+    List expected test types (unit, integration, property-based, etc.)
+    and their locations.
+  preflight:
+  - name: test_categories
+    cmd:
+    - search
+    - 'test'
+    - --limit
+    - '40'
+    - --format
+    - json
+- id: D_SKEL_1
+  title: Enterprise Docs Skeleton
+  category: skeleton
+  advice_mode: llm
+  question: |
+    RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+    According to enterprise_docs_skeleton/docs/, what documentation files
+    are required for enterprise readiness? List required documents and their purposes.
+  preflight:
+  - name: skeleton_hits
+    cmd:
+    - search
+    - skeleton
+    - --limit
+    - '30'
+    - --format
+    - json
+  - name: enterprise_hits
+    cmd:
+    - search
+    - enterprise
+    - --limit
+    - '30'
+    - --format
+    - json
+- id: D_SKEL_2
+  title: Security Documentation
+  category: skeleton
+  advice_mode: llm
+  question: |
+    RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+    According to enterprise_docs_skeleton/docs/SECURITY.md or docs/ship/SECURITY.md,
+    what security documentation is required?
+    - Security policy
+    - Vulnerability reporting
+    - Security considerations for users
+  preflight:
+  - name: security_docs
+    cmd:
+    - search
+    - security
+    - --limit
+    - '40'
+    - --format
+    - json
+  - name: vulnerability_docs
+    cmd:
+    - search
+    - vulnerability
+    - --limit
+    - '30'
+    - --format
+    - json
+- id: D_SKEL_3
+  title: Installation Documentation
+  category: skeleton
+  advice_mode: llm
+  question: |
+    RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+    According to docs/ship/INSTALL.md or the skeleton,
+    what installation documentation is required?
+    - Supported platforms
+    - Dependencies
+    - Installation methods
+  preflight:
+  - name: install_docs
+    cmd:
+    - search
+    - install
+    - --limit
+    - '40'
+    - --format
+    - json
+- id: D_XREF_1
+  title: Stale Reference Policy
+  category: cross_reference
+  advice_mode: llm
+  question: |
+    RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+    According to docs/internal/CONTRIBUTING.md, what is the policy for
+    handling stale references (docs that reference deleted/renamed code)?
+    - Detection method
+    - Remediation process
+    - Blocking vs advisory
+  preflight:
+  - name: stale_ref_policy
+    cmd:
+    - search
+    - stale
+    - --limit
+    - '30'
+    - --format
+    - json
+  - name: reference_policy
+    cmd:
+    - search
+    - reference
+    - --limit
+    - '30'
+    - --format
+    - json
+- id: D_XREF_2
+  title: Code Reference Format
+  category: cross_reference
+  advice_mode: llm
+  question: |
+    RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+    According to the documentation, what format should be used for
+    referencing code from documentation?
+    - File path format
+    - Line number format
+    - Function/type reference format
+  preflight:
+  - name: code_ref_format
+    cmd:
+    - search
+    - 'file path'
+    - --limit
+    - '30'
+    - --format
+    - json
+validation:
+  required_verdicts:
+  - TRUE_POSITIVE
+  - FALSE_POSITIVE
+  - INDETERMINATE
+  citation_format: path:line(-line)
+  fail_on_missing_citations: true
+  minimum_questions: 18
+runner:
+  plugin: none

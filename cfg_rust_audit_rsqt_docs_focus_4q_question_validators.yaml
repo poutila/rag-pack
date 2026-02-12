@@ -1,0 +1,51 @@
+defaults:
+  test_path_patterns:
+  - '(^|/)(tests)(/|$)'
+  - '(^|/)(testdata|fixtures)(/|$)'
+  - '(^|/)[^/]*_tests?\.rs$'
+  - '(^|/)test_[^/]+\.rs$'
+
+validators:
+  R_DOC_COVERAGE_1:
+  - type: require_min_inline_regex_count
+    regex: 'R_DOC_COVERAGE_1_doc_analysis\.json:1'
+    min_count: 1
+    message: 'R_DOC_COVERAGE_1: must cite doc_analysis artifact token (expected R_DOC_COVERAGE_1_doc_analysis.json:1)'
+  - type: require_min_inline_regex_count
+    regex: '(?i)\bDOC_SUMMARY\b'
+    min_count: 1
+    message: 'R_DOC_COVERAGE_1: must reference DOC_SUMMARY counts in the answer'
+
+  R_DOC_UNDOC_1:
+  - type: require_min_inline_regex_count
+    regex: 'R_DOC_UNDOC_1_doc_analysis\.json:1'
+    min_count: 1
+    message: 'R_DOC_UNDOC_1: must cite doc_analysis artifact token (expected R_DOC_UNDOC_1_doc_analysis.json:1)'
+  - type: require_min_inline_regex_count
+    regex: '(?i)(?![A-Za-z0-9_.\-/]*/tests/)[A-Za-z0-9_.\-/]+\.rs:\d+'
+    min_count: 1
+    message: 'R_DOC_UNDOC_1: must include at least one non-test .rs:line citation (exclude /tests/)'
+
+  R_DOC_MATCH_1:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_DOC_MATCH_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_DOC_MATCH_1: Missing CITATIONS line with at least one path:line token'
+
+  R_DOC_GENERATE_1:
+  - type: require_min_inline_regex_count
+    regex: 'R_DOC_GENERATE_1_doc_analysis\.json:1'
+    min_count: 1
+    message: 'R_DOC_GENERATE_1: must cite doc_analysis artifact token (expected R_DOC_GENERATE_1_doc_analysis.json:1)'
+  - type: require_min_inline_regex_count
+    regex: '(?m)^DOC_TARGET_[1-5]='
+    min_count: 5
+    message: 'R_DOC_GENERATE_1: must emit DOC_TARGET_1..DOC_TARGET_5 lines'
+  - type: require_min_inline_regex_count
+    regex: '(?m)^DOC_TEXT_[1-5]=(///|NONE)'
+    min_count: 5
+    message: 'R_DOC_GENERATE_1: must emit DOC_TEXT_1..DOC_TEXT_5 lines with ///... or NONE'

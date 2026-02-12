@@ -1,0 +1,249 @@
+version: 1.11.0
+pack_type: rust_audit_general_set2
+engine: rsqt
+response_schema: '--- REQUIRED OUTPUT FORMAT ---
+
+  MANDATORY FIRST LINES (must be the first two lines of your response; copy exactly):
+
+  VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+
+  CITATIONS=path:line(-line), path:line(-line), ...
+
+
+  After those two lines, write the answer body.
+
+
+  Hard bans:
+
+  - Do NOT output Markdown section headers like "Analysis:" or "CITATIONS:".
+
+  - Do NOT invent line numbers or file paths. Only cite tokens that appear in the evidence (including artifact anchors like
+  *.json:1).
+
+  - Do NOT include VERDICT or CITATIONS anywhere else in the body.
+
+
+  Policy:
+
+  - If a claim cannot be proven from extracted evidence, set VERDICT=INDETERMINATE and say "INSUFFICIENT EVIDENCE" + list
+  what is missing.
+
+  - Prefer deterministic extraction evidence; do NOT speculate.
+
+  '
+defaults:
+  chat_top_k: 12
+  max_tokens: 2000
+  temperature: 0.0
+questions:
+- id: R_API_2
+  title: Top Public Items (Heuristic)
+  category: api_coverage
+  top_k: 15
+  advice_mode: llm
+  question: 'RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+
+    List examples of public API items (heuristic scan). Provide:
+
+    - up to 10 pub fn signatures
+
+    - up to 10 pub struct declarations
+
+    - up to 10 pub trait declarations
+
+    - up to 10 pub enum declarations
+
+
+    Use the extracted signature/line_text present in evidence; do NOT require full source files.
+
+    Include file:line citations.
+
+    '
+  preflight:
+  - name: fn_entities
+    cmd:
+    - entities
+    - --kind
+    - fn
+    - --limit
+    - '30'
+    - --format
+    - json
+  - name: struct_entities
+    cmd:
+    - entities
+    - --kind
+    - struct
+    - --limit
+    - '30'
+    - --format
+    - json
+  - name: trait_entities
+    cmd:
+    - entities
+    - --kind
+    - trait
+    - --limit
+    - '20'
+    - --format
+    - json
+  - name: enum_entities
+    cmd:
+    - entities
+    - --kind
+    - enum
+    - --limit
+    - '20'
+    - --format
+    - json
+  - name: pub_fn_hits
+    cmd:
+    - search
+    - 'pub fn '
+    - --limit
+    - '50'
+    - --format
+    - json
+  - name: pub_struct_hits
+    cmd:
+    - search
+    - 'pub struct '
+    - --limit
+    - '50'
+    - --format
+    - json
+  - name: pub_trait_hits
+    cmd:
+    - search
+    - 'pub trait '
+    - --limit
+    - '30'
+    - --format
+    - json
+  - name: pub_enum_hits
+    cmd:
+    - search
+    - 'pub enum '
+    - --limit
+    - '30'
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+- id: R_API_3
+  title: Public Re-exports (pub use)
+  category: api_coverage
+  top_k: 10
+  answer_mode: deterministic
+  advice_mode: llm
+  question: "RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.\n\nIdentify\
+    \ public re-exports via `pub use`.\n\nQuote each `pub use` statement from the evidence below, one per line,\nwith its\
+    \ file:line citation. Include at least the first 20 results.\n\nOutput format (one per line):\n  pub use crate::module::{Type1,\
+    \ Type2};  // file.rs:NN\n\nDo NOT just say \"listed above\" - you MUST repeat each pub use line in your answer.\n"
+  preflight:
+  - name: pub_use_hits
+    cmd:
+    - search
+    - 'pub use '
+    - --limit
+    - '80'
+    - --format
+    - json
+    transform:
+      render: lines
+  expected_verdict: TRUE_POSITIVE
+- id: R_RISK_1
+  title: Risk Hotspots Analysis
+  category: safety
+  top_k: 8
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+
+    Identify the highest-risk production files based on weighted factors.
+
+
+    The evidence shows files ranked by risk score combining:
+
+    - unwrap/panic usage
+
+    - unsafe code presence
+
+    - transmute usage
+
+    - test coverage gaps
+
+    - public API exposure
+
+
+    For the top 5 hotspots:
+
+    1. List file path and risk score
+
+    2. Identify the primary risk factors
+
+    3. Recommend specific mitigation (add tests, reduce unwraps, etc.)
+
+
+    If no hotspots found (all scores near 0), state: "No significant risk hotspots detected."
+
+    '
+  preflight:
+  - name: risk_hotspots
+    cmd:
+    - risk-hotspots
+    - --format
+    - json
+    - --limit
+    - '10'
+  expected_verdict: TRUE_POSITIVE
+- id: R_SAFE_1
+  title: Unsafe Code Inventory
+  category: safety
+  top_k: 8
+  advice_mode: llm
+  question: 'RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+
+    Inventory unsafe usage:
+
+    - list files containing unsafe blocks/functions
+
+    - report block counts and whether SAFETY comments exist (if indicated by evidence).
+
+
+    If no unsafe usage, explicitly say: "No unsafe blocks detected by rsqt unsafe".
+
+    '
+  preflight:
+  - name: unsafe_blocks
+    cmd:
+    - unsafe
+    - --format
+    - json
+  - name: safety_comment_hits
+    cmd:
+    - search
+    - 'SAFETY:'
+    - --limit
+    - '80'
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+validation:
+  required_verdicts:
+  - TRUE_POSITIVE
+  - FALSE_POSITIVE
+  - INDETERMINATE
+  citation_format: path:line(-line)
+  fail_on_missing_citations: true
+  enforce_citations_from_evidence: true
+  enforce_no_new_paths: true
+  enforce_paths_must_be_cited: true
+  minimum_questions: 4
+runner:
+  plugin: rsqt_guru
+  plugin_config:
+    rules_path: cfg_rust_audit_rsqt_general_finding_rules.yaml
+    question_validators_path: cfg_rust_audit_rsqt_general_question_validators.yaml

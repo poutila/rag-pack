@@ -1,0 +1,74 @@
+engines:
+  rsqt:
+    prefix_uv:
+    - uv
+    - run
+    - rsqt
+    prefix_direct:
+    - rsqt
+    target_dir_flag: --target-dir
+    chat_subcommand: chat
+    parquet_flag: --rsqt
+    index_flag: --index
+    backend_flag: --backend
+    top_k_flag: --top-k
+    model_flag: --model
+    system_prompt_flag: --system-prompt-file
+    max_tokens_flag: --max-tokens
+    temperature_flag: --temperature
+    format_flag: --format
+    format_value: json
+    prompt_profile_flag: --prompt-profile
+    top_p_flag: --top-p
+    num_ctx_flag: --num-ctx
+    preflight_needs_index_cmds:
+    - rag-search
+    - chat
+  mdparse:
+    prefix_uv:
+    - uv
+    - run
+    - mdparse
+    prefix_direct:
+    - mdparse
+    target_dir_flag: null
+    chat_subcommand: chat
+    parquet_flag: --mdparse
+    index_flag: --index
+    backend_flag: --backend
+    top_k_flag: --top-k
+    model_flag: --model
+    system_prompt_flag: --system-prompt-file
+    max_tokens_flag: --max-tokens
+    temperature_flag: --temperature
+    format_flag: --format
+    format_value: json
+    prompt_profile_flag: null
+    top_p_flag: --top-p
+    num_ctx_flag: --num-ctx
+    preflight_needs_index_cmds: []
+  raqt:
+    prefix_uv:
+    - uv
+    - run
+    - raqt
+    prefix_direct:
+    - raqt
+    target_dir_flag: --target-dir
+    chat_subcommand: chat
+    parquet_flag: --raqt
+    index_flag: --index
+    backend_flag: --backend
+    top_k_flag: --top-k
+    model_flag: --model
+    system_prompt_flag: --system-prompt-file
+    max_tokens_flag: --max-tokens
+    temperature_flag: --temperature
+    format_flag: --format
+    format_value: json
+    prompt_profile_flag: --prompt-profile
+    top_p_flag: null
+    num_ctx_flag: null
+    preflight_needs_index_cmds:
+    - rag-search
+    - chat

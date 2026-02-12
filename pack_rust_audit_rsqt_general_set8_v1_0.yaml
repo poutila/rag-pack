@@ -1,0 +1,229 @@
+version: 1.11.0
+pack_type: rust_audit_general_set8
+engine: rsqt
+response_schema: '--- REQUIRED OUTPUT FORMAT ---
+
+  MANDATORY FIRST LINES (must be the first two lines of your response; copy exactly):
+
+  VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+
+  CITATIONS=path:line(-line), path:line(-line), ...
+
+
+  After those two lines, write the answer body.
+
+
+  Hard bans:
+
+  - Do NOT output Markdown section headers like "Analysis:" or "CITATIONS:".
+
+  - Do NOT invent line numbers or file paths. Only cite tokens that appear in the evidence (including artifact anchors like
+  *.json:1).
+
+  - Do NOT include VERDICT or CITATIONS anywhere else in the body.
+
+
+  Policy:
+
+  - If a claim cannot be proven from extracted evidence, set VERDICT=INDETERMINATE and say "INSUFFICIENT EVIDENCE" + list
+  what is missing.
+
+  - Prefer deterministic extraction evidence; do NOT speculate.
+
+  '
+defaults:
+  chat_top_k: 12
+  max_tokens: 2000
+  temperature: 0.0
+questions:
+- id: R_SAFE_1
+  title: Unsafe Code Inventory
+  category: safety
+  top_k: 8
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+
+    Inventory unsafe usage:
+
+    - list files containing unsafe blocks/functions
+
+    - report block counts and whether SAFETY comments exist (if indicated by evidence).
+
+
+    If no unsafe usage, explicitly say: "No unsafe blocks detected by rsqt unsafe".
+
+    '
+  preflight:
+  - name: unsafe_blocks
+    cmd:
+    - unsafe
+    - --format
+    - json
+  - name: safety_comment_hits
+    cmd:
+    - search
+    - 'SAFETY:'
+    - --limit
+    - '80'
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+- id: R_SAFE_2
+  title: FFI / ABI Surface
+  category: safety
+  top_k: 8
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+
+    Inventory FFI/ABI surface:
+
+    - extern "C"
+
+    - #[no_mangle]
+
+    - #[repr(C)]
+
+    - static mut (if present)
+
+
+    If count=0 or no results, explicitly state: "No FFI/ABI surface detected."
+
+    If FFI exists, summarize the risk and what invariants must hold.
+
+    '
+  preflight:
+  - name: ffi_surface
+    cmd:
+    - ffi
+    - --format
+    - json
+  - name: static_mut_hits
+    cmd:
+    - search
+    - static mut
+    - --limit
+    - '40'
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+- id: R_SAFE_5
+  title: Transmute and Raw Pointer Surface
+  category: safety
+  top_k: 8
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+
+    Inventory dangerous memory operations:
+
+    - transmute calls (mem::transmute, transmute_copy)
+
+    - raw pointer usage (*const T, *mut T)
+
+
+    If count=0 for both, state: "No transmute or raw pointer usage detected."
+
+    If found, list files and assess risk level (HIGH/MEDIUM/LOW).
+
+    '
+  preflight:
+  - name: transmute_files
+    cmd:
+    - transmute
+    - --format
+    - json
+  - name: raw_ptr_files
+    cmd:
+    - raw-ptrs
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+- id: R_SAFE_6
+  title: Detailed Unsafe Breakdown
+  category: safety
+  top_k: 8
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+
+    Provide detailed breakdown of unsafe code by category:
+
+    - unsafe fn declarations (functions declared as unsafe)
+
+    - unsafe impl blocks (impl blocks for unsafe traits)
+
+    - unsafe trait declarations (traits requiring unsafe impl)
+
+    - unsafe blocks within safe functions
+
+
+    Summarize which category dominates and assess overall safety posture.
+
+    If all counts are zero, state: "No unsafe code detected in any category."
+
+    '
+  preflight:
+  - name: unsafe_breakdown
+    cmd:
+    - query
+    - --columns
+    - file_path
+    - unsafe_fn_count
+    - unsafe_impl_count
+    - unsafe_trait_count
+    - unsafe_block_count
+    - --limit
+    - '100'
+    - --format
+    - json
+    transform:
+      render: lines
+      max_items: 40
+      max_chars: 24000
+  - name: unsafe_fn_hits
+    cmd:
+    - search
+    - 'unsafe fn '
+    - --limit
+    - '40'
+    - --format
+    - json
+  - name: unsafe_impl_hits
+    cmd:
+    - search
+    - 'unsafe impl '
+    - --limit
+    - '40'
+    - --format
+    - json
+  - name: unsafe_trait_hits
+    cmd:
+    - search
+    - 'unsafe trait '
+    - --limit
+    - '20'
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+validation:
+  required_verdicts:
+  - TRUE_POSITIVE
+  - FALSE_POSITIVE
+  - INDETERMINATE
+  citation_format: path:line(-line)
+  fail_on_missing_citations: true
+  enforce_citations_from_evidence: true
+  enforce_no_new_paths: true
+  enforce_paths_must_be_cited: true
+  minimum_questions: 4
+runner:
+  plugin: rsqt_guru
+  plugin_config:
+    rules_path: cfg_rust_audit_rsqt_general_finding_rules.yaml
+    question_validators_path: cfg_rust_audit_rsqt_general_question_validators.yaml

@@ -1,0 +1,910 @@
+# AI Assistant Orientation: RSQT (Rust Source Query Tool)
+# Version: 2.3
+# Last Updated: 2026-02-10
+
+schema_version: 2
+
+metadata:
+  format: "interactive_orientation"
+  duration: "3 minutes"
+  goal: "Internalize risk-surface-first analysis for Rust (unsafe/FFI/panic/unwrap)"
+  target_audience: "AI assistants (Claude, GPT, etc.) and humans"
+  expected_outcome: "Behavior change: index Rust → query risk surfaces → only then read code"
+  version: "2.3-yaml-agnostic"
+  portability: "Works in any Rust repo indexable into RSQT.parquet"
+  changes_from_v2:
+    - "Added dump command (export RSQT.parquet to JSON)"
+    - "Added columns command (list available query columns)"
+    - "Added docs command (extract documentation structure)"
+    - "Added entity_doc_comment column (40 columns total)"
+    - "Added rust-xref integration note"
+  changes_from_v2_1:
+    - "Added 12 missing commands: transmute, raw-ptrs, panics, test-coverage, modules, api-surface, impls, health, risk-hotspots, coverage-risk, doc-findings, audit"
+    - "Updated command count from 14 to 26"
+    - "Added audit/doc-findings with FINDINGS.jsonl output"
+    - "Added health dashboard with letter grade"
+  changes_from_v2_2:
+    - "Added schemas command (FR-4 versioned output contract) — 26 → 27 commands"
+    - "Added --strict-json global flag (stdout-only JSON, progress to stderr)"
+    - "Added --profile {ci} global flag (deterministic output, stable sort, implies --fail-on-stale)"
+    - "Added rust_audit_guru prompt profile to chat command"
+    - "Updated rust-xref integration: 36 commands with raqt-defs/raqt-refs/raqt-stats"
+  adaptation_required:
+    - "Source directory is auto-discovered from pyproject.toml; use global --target-dir to control RSQT.parquet location if needed"
+
+how_consumed:
+  how: "Execute steps sequentially; treat RSQT as your safety audit lens."
+  side_effects_policy: "Assume read-only unless a step explicitly says writes_files: true."
+  failure_policy:
+    - "If RSQT.parquet is missing/stale: regenerate (default behavior auto-refreshes; use --fail-on-stale for strict mode)."
+    - "If results are surprising: verify you indexed the correct root and excluded dirs."
+
+placeholder_legend:
+  "<query>": "Substring search term."
+  "<file_filter>": "Substring filter for file paths (example: ffi)."
+  "<source_filter>": "Substring filter for source text (example: unsafe)."
+  "<RSQT_DIR>": "Directory containing RSQT.parquet (passed via global --target-dir)."
+
+role: |
+  You are an AI assistant that treats Rust risk surfaces as first-class facts.
+  Your motivation: RSQT tells you where correctness and security concentrate (unsafe, FFI, panic, unwrap),
+  without hand-reading hundreds of files.
+
+context:
+  problem: "Assistants can miss the small parts of Rust code that carry the largest risk."
+  solution: "Index the repo, then query for unsafe/FFI/runtime-failure/public-surface patterns before reading code."
+
+  critical_rules:
+    - rule: "If the question is safety-related (unsafe/FFI/panic/unwrap), run RSQT queries before reading code."
+    - rule: "Treat counts and file lists as triage inputs; read code only after you have a ranked target list."
+    - rule: "Prefer `uv run rsqt ...` when available."
+    - rule: "Use global --target-dir flag when working with non-default index locations."
+
+# =============================================================================
+# SCHEMA REFERENCE (44 Columns)
+# =============================================================================
+
+schema:
+  total_columns: 44
+  categories:
+    file_metadata:
+      description: "Core file identification and tracking"
+      columns:
+        - name: "record_id"
+          type: "String"
+          description: "Unique ID: rsqt:{relative_path} (file anchors) or rsqt:{path}::{entity_id} (entity rows)"
+        - name: "file_path"
+          type: "String"
+          description: "Relative path from source root (includes proof files like Cargo.toml/Cargo.lock)"
+        - name: "source_text"
+          type: "String"
+          description: "Full file contents (file anchors) or extracted entity source (entity rows)"
+        - name: "total_lines"
+          type: "Int64"
+          description: "Lines of code"
+        - name: "file_mtime"
+          type: "String"
+          description: "Modification timestamp"
+        - name: "file_size"
+          type: "String"
+          description: "File size in bytes"
+        - name: "file_content_hash"
+          type: "String"
+          description: "SHA-256 hash"
+        - name: "generated_at"
+          type: "String"
+          description: "Index generation time"
+        - name: "rsqt_version"
+          type: "String"
+          description: "RSQT version"
+
+    entity_rows:
+      description: "Track B row discrimination + source spans"
+      columns:
+        - name: "entity_kind"
+          type: "String"
+          description: "Row kind: file (anchor) or extracted entity kind (fn, trait, impl, macro, struct, enum, const, static, mod, type, ...)"
+        - name: "entity_id"
+          type: "String"
+          description: "For anchors: same as record_id; for entities: unique entity id (name-like)"
+        - name: "byte_start"
+          type: "Int64"
+          description: "Start byte offset (0-indexed; entities only)"
+        - name: "byte_end"
+          type: "Int64"
+          description: "End byte offset (exclusive; entities only)"
+        - name: "line_start"
+          type: "Int64"
+          description: "Start line (1-indexed; entities only)"
+        - name: "line_end"
+          type: "Int64"
+          description: "End line (1-indexed, inclusive; entities only)"
+
+    module_info:
+      description: "Module structure and public API surface"
+      columns:
+        - name: "has_tests"
+          type: "Boolean"
+          description: "Contains #[test] functions"
+        - name: "module_type"
+          type: "String"
+          description: "Module classification"
+        - name: "doc_comment"
+          type: "String"
+          description: "//! module documentation"
+        - name: "entity_doc_comment"
+          type: "String"
+          description: "/// doc comment for entity (fn, struct, trait, etc.)"
+        - name: "pub_fn_count"
+          type: "Int64"
+          description: "Public function count"
+        - name: "pub_struct_count"
+          type: "Int64"
+          description: "Public struct count"
+        - name: "pub_trait_count"
+          type: "Int64"
+          description: "Public trait count"
+        - name: "impl_count"
+          type: "Int64"
+          description: "impl block count"
+
+    unsafe_surface:
+      description: "Memory safety risks - HIGHEST AUDIT PRIORITY"
+      columns:
+        - name: "has_unsafe"
+          type: "Boolean"
+          description: "Contains any unsafe code"
+        - name: "unsafe_block_count"
+          type: "Int64"
+          description: "unsafe { } blocks"
+        - name: "unsafe_fn_count"
+          type: "Int64"
+          description: "unsafe fn declarations"
+        - name: "unsafe_impl_count"
+          type: "Int64"
+          description: "unsafe impl blocks"
+        - name: "unsafe_trait_count"
+          type: "Int64"
+          description: "unsafe trait definitions"
+
+    ffi_surface:
+      description: "Foreign function interface and ABI boundaries"
+      columns:
+        - name: "has_ffi"
+          type: "Boolean"
+          description: "Contains any FFI markers"
+        - name: "extern_c_count"
+          type: "Int64"
+          description: "extern \"C\" functions"
+        - name: "no_mangle_count"
+          type: "Int64"
+          description: "#[no_mangle] exports"
+        - name: "repr_c_count"
+          type: "Int64"
+          description: "#[repr(C)] structs"
+        - name: "static_mut_count"
+          type: "Int64"
+          description: "static mut declarations"
+        - name: "transmute_count"
+          type: "Int64"
+          description: "mem::transmute calls"
+        - name: "raw_ptr_count"
+          type: "Int64"
+          description: "*const/*mut pointers"
+
+    runtime_risks:
+      description: "Potential panic points and unwrap usage"
+      columns:
+        - name: "has_panic"
+          type: "Boolean"
+          description: "Contains panic!/unreachable!"
+        - name: "panic_count"
+          type: "Int64"
+          description: "Explicit panic calls"
+        - name: "has_unwrap"
+          type: "Boolean"
+          description: "Contains .unwrap()"
+        - name: "unwrap_count"
+          type: "Int64"
+          description: ".unwrap() calls"
+        - name: "expect_count"
+          type: "Int64"
+          description: ".expect() calls"
+
+    test_boundary:
+      description: "v3.1 test boundary detection columns (tree-sitter AST)"
+      columns:
+        - name: "test_code_lines"
+          type: "Int64"
+          description: "Lines of code inside #[test] or #[cfg(test)] blocks"
+        - name: "prod_unwrap_count"
+          type: "Int64"
+          description: ".unwrap() calls in production code only"
+        - name: "prod_expect_count"
+          type: "Int64"
+          description: ".expect() calls in production code only"
+        - name: "prod_panic_count"
+          type: "Int64"
+          description: "panic!() calls in production code only"
+
+  column_quick_reference:
+    for_triage: "file_path, total_lines, has_unsafe, has_ffi, has_panic, has_unwrap"
+    for_entity_location: "file_path, entity_kind, entity_id, line_start, line_end"
+    for_unsafe_audit: "file_path, unsafe_block_count, unsafe_fn_count, unsafe_impl_count, unsafe_trait_count"
+    for_ffi_audit: "file_path, extern_c_count, no_mangle_count, repr_c_count, static_mut_count, transmute_count, raw_ptr_count"
+    for_runtime_audit: "file_path, panic_count, unwrap_count, expect_count"
+    for_prod_safety: "file_path, test_code_lines, prod_unwrap_count, prod_expect_count, prod_panic_count"
+    for_public_api: "file_path, pub_fn_count, pub_struct_count, pub_trait_count"
+
+# =============================================================================
+# COMMAND REFERENCE (27 Commands)
+# =============================================================================
+#
+# Global options (must be placed BEFORE the subcommand):
+#   --target-dir, -t TARGET_DIR  Directory containing RSQT.parquet (default: repo root)
+#   --fail-on-stale              Raise error on stale index instead of auto-regenerating
+#   --strict-json                Guarantee stdout is strict JSON only (progress to stderr)
+#   --profile {ci}               Deterministic output (stable sort, resolved paths, implies --fail-on-stale)
+#   --version                    Show version
+#
+
+commands:
+  generate:
+    purpose: "Create RSQT.parquet index from Rust source"
+    syntax: "uv run rsqt generate [--full] [--verbose]"
+    flags:
+      --full: "Force full regeneration"
+      --verbose: "Show detailed progress (-v)"
+    notes: "Source directory is auto-discovered from pyproject.toml. Output location is controlled by global --target-dir."
+    examples:
+      basic: "uv run rsqt generate"
+      full_regen: "uv run rsqt generate --full --verbose"
+      custom_dir: "uv run rsqt --target-dir <RSQT_DIR> generate --full"
+
+  stats:
+    purpose: "Show index statistics and coverage summary"
+    syntax: "uv run rsqt stats [--include-all-files] [--format {text,json}]"
+    flags:
+      --include-all-files: "Include non-.rs proof files (Cargo.toml, etc.) in statistics"
+      --format: "Output format (text or json)"
+    examples:
+      basic: "uv run rsqt stats"
+      json: "uv run rsqt stats --format json"
+      all_files: "uv run rsqt stats --include-all-files"
+
+  unsafe:
+    purpose: "List files containing unsafe code (sorted by unsafe_block_count)"
+    syntax: "uv run rsqt unsafe [--format {text,json}]"
+    flags:
+      --format: "Output format (text or json)"
+    examples:
+      basic: "uv run rsqt unsafe"
+      json: "uv run rsqt unsafe --format json"
+    output_columns:
+      - "file_path"
+      - "total_lines"
+      - "has_unsafe"
+      - "unsafe_block_count"
+      - "unsafe_fn_count"
+      - "unsafe_impl_count"
+      - "unsafe_trait_count"
+
+  ffi:
+    purpose: "List files with FFI/ABI surface markers"
+    syntax: "uv run rsqt ffi [--format {text,json}]"
+    flags:
+      --format: "Output format (text or json)"
+    examples:
+      basic: "uv run rsqt ffi"
+      json: "uv run rsqt ffi --format json"
+    detects:
+      - "extern \"C\" functions"
+      - "#[no_mangle] exports"
+      - "#[repr(C)] structs"
+      - "static mut globals"
+      - "transmute calls"
+      - "Raw pointer usage"
+
+  search:
+    purpose: "Substring search over indexed source text (case-insensitive)"
+    syntax: "uv run rsqt search <query> [--limit N] [--include-all-files] [--format {text,json}]"
+    flags:
+      --limit: "Maximum results (-n) (default: 10)"
+      --include-all-files: "Search non-.rs proof files (Cargo.toml, etc.) as well"
+      --format: "Output format (text or json)"
+    examples:
+      basic: "uv run rsqt search 'pub fn' --limit 10"
+      literal: "uv run rsqt search 'unwrap(' --limit 20"
+      limited: "uv run rsqt search 'FIXME' --limit 50"
+    output_columns:
+      - "file_path"
+      - "line_number"
+      - "line_text"
+
+  query:
+    purpose: "Flexible querying with column selection and filtering"
+    syntax: "uv run rsqt query [--file <filter>] [--contains <filter>] [--columns COL1 COL2 ...] [--limit N] [--include-all-files] [--include-entities] [--format {text,json}]"
+    flags:
+      --file: "Filter by file path substring (-f)"
+      --contains: "Filter by source text substring (-c)"
+      --columns: "Columns to return (space-separated)"
+      --limit: "Maximum results (-n)"
+      --include-all-files: "Include non-.rs proof files (Cargo.toml, etc.) in results"
+      --include-entities: "Include entity rows (fn, trait, impl, etc.) in addition to file anchors"
+      --format: "Output format (text or json)"
+    examples:
+      triage_view: "uv run rsqt query --columns file_path has_unsafe has_ffi unwrap_count panic_count"
+      filter_by_path: "uv run rsqt query --file engine/src --columns file_path total_lines has_unsafe"
+      filter_by_content: "uv run rsqt query --contains 'transmute' --columns file_path transmute_count raw_ptr_count"
+      combined: "uv run rsqt query --file ffi --contains 'extern' --columns file_path extern_c_count no_mangle_count --limit 20"
+      unwrap_hotspots: "uv run rsqt query --columns file_path unwrap_count expect_count --limit 30"
+
+  entities:
+    purpose: "Query extracted entities (fn, trait, impl, macro, struct, enum, const, static, mod, type)"
+    syntax: "uv run rsqt entities [--stats] [--kind KIND] [--file FILE] [--limit N] [--format {text,json}]"
+    flags:
+      --stats: "Show entity kind distribution (default if no filters)"
+      --kind: "Filter by entity kind (fn, trait, impl, macro, struct, etc.) (-k)"
+      --file: "Filter by file path contains (-f)"
+      --limit: "Limit number of results (-n)"
+      --format: "Output format (text or json)"
+    examples:
+      distribution: "uv run rsqt entities --stats"
+      functions: "uv run rsqt entities --kind fn --limit 50"
+      traits_in_module: "uv run rsqt entities --kind trait --file engine/src"
+
+  prod-unwraps:
+    purpose: "Find unwrap/expect calls in production code only (excludes test code)"
+    syntax: "uv run rsqt prod-unwraps [--limit N] [--format {text,json}]"
+    flags:
+      --limit: "Limit number of results (-n)"
+      --format: "Output format (text or json)"
+    notes: "Uses marker-based heuristic: scans for test boundary markers (#[cfg(test)], mod tests, #[test]) and only counts unwrap/expect BEFORE the first marker."
+    examples:
+      basic: "uv run rsqt prod-unwraps"
+      json: "uv run rsqt prod-unwraps --format json"
+
+  rag-index:
+    purpose: "Build a FAISS vector index from RSQT.parquet (semantic search)"
+    syntax: "uv run rsqt rag-index RSQT.parquet --output .rsqt.faiss [--entity-kinds fn struct ...]"
+    flags:
+      parquet: "Path to RSQT.parquet (positional)"
+      --output: "Output path for FAISS index (-o)"
+      --entity-kinds: "Filter to specific entity kinds (e.g., fn struct) (-k)"
+    examples:
+      basic: "uv run rsqt rag-index RSQT.parquet --output .rsqt.faiss"
+      only_functions: "uv run rsqt rag-index RSQT.parquet --output .rsqt.faiss --entity-kinds fn"
+
+  rag-search:
+    purpose: "Semantic search over indexed Rust code"
+    syntax: "uv run rsqt rag-search <query> --index .rsqt.faiss --rsqt RSQT.parquet [--top-k N]"
+    flags:
+      --index: "Path to FAISS index file (-i)"
+      --rsqt: "Path to current RSQT.parquet (required for staleness verification)"
+      --top-k: "Number of results to return (-k) (default: 5)"
+    examples:
+      basic: "uv run rsqt rag-search 'error handling' --index .rsqt.faiss --rsqt RSQT.parquet"
+
+  chat:
+    purpose: "Ask questions about Rust code using LLM"
+    syntax: "uv run rsqt chat <question> --index .rsqt.faiss --rsqt RSQT.parquet [--backend <backend>] [--model <model>] [--top-k N] [--prompt-profile {default,grounded,rust_audit_guru}] [--format {text,json}]"
+    flags:
+      --index: "Path to FAISS index file (-i)"
+      --rsqt: "Path to current RSQT.parquet (required for staleness verification)"
+      --backend: "LLM backend (default: anthropic)"
+      --model: "Model name (uses backend default if not specified)"
+      --top-k: "Context chunks to retrieve (-k) (default: 5)"
+      --prompt-profile: "Prompt template: default, grounded (strict citing), rust_audit_guru (citation-rich audit)"
+      --format: "Output format (text or json)"
+    examples:
+      anthropic: "uv run rsqt chat 'How does error handling work?' --index .rsqt.faiss --rsqt RSQT.parquet --backend anthropic"
+      ollama: "uv run rsqt chat 'What is the architecture?' --index .rsqt.faiss --rsqt RSQT.parquet --backend ollama --model qwen2.5:14b"
+      audit: "uv run rsqt chat 'Audit unsafe usage' --index .rsqt.faiss --rsqt RSQT.parquet --prompt-profile rust_audit_guru"
+
+  dump:
+    purpose: "Export RSQT.parquet to JSON for external tools or inspection"
+    syntax: "uv run rsqt dump [--output FILE]"
+    flags:
+      --output: "Output JSON file path (-o) (default: stdout)"
+    examples:
+      stdout: "uv run rsqt dump"
+      to_file: "uv run rsqt dump --output rsqt_export.json"
+    use_cases:
+      - "Feed to jq for custom analysis"
+      - "Import into other tools"
+      - "Debug index contents"
+
+  columns:
+    purpose: "List all available query columns (schema discovery)"
+    syntax: "uv run rsqt columns [--format {text,json}]"
+    flags:
+      --format: "Output format (text or json)"
+    examples:
+      list: "uv run rsqt columns"
+      json: "uv run rsqt columns --format json"
+    use_cases:
+      - "Discover available columns before writing queries"
+      - "Validate column names"
+
+  docs:
+    purpose: "Extract documentation structure (module //! and entity /// docs)"
+    syntax: "uv run rsqt docs [--format {text,json}] [--file FILTER] [--kind KIND] [--missing-only]"
+    flags:
+      --format: "Output format (text or json)"
+      --file: "Filter by file path substring (-f)"
+      --kind: "Filter by entity kind (fn, struct, trait, etc.) (-k)"
+      --missing-only: "Show only undocumented entities"
+    examples:
+      basic: "uv run rsqt docs"
+      json: "uv run rsqt docs --format json"
+      filter_file: "uv run rsqt docs --file lib.rs"
+      missing: "uv run rsqt docs --missing-only --format json"
+    output_structure: |
+      {
+        "files": [
+          {
+            "file_path": "src/lib.rs",
+            "module_doc": "//! Crate documentation...",
+            "entities": [
+              {"entity_id": "...", "kind": "fn", "name": "add", "line": 10, "doc": "/// Adds two numbers"}
+            ]
+          }
+        ]
+      }
+    use_cases:
+      - "Feed documentation to LLM for review or improvement suggestions"
+      - "Doc coverage auditing with --missing-only"
+      - "External documentation tooling integration"
+
+  doc-findings:
+    purpose: "Generate deterministic FINDINGS.jsonl from documentation mapping"
+    syntax: "uv run rsqt doc-findings"
+    rules:
+      - "DOC_PUB_MISSING (MEDIUM) - Public entity without documentation"
+      - "DOC_PUB_FN_MISSING_ARGS (LOW) - Documented pub fn with params, no Arguments section"
+      - "DOC_PUB_FN_MISSING_RETURNS (LOW) - Documented pub fn with return, no Returns section"
+      - "DOC_RESULT_MISSING_ERRORS (MEDIUM) - Documented pub fn returns Result, no Errors section"
+      - "DOC_PUB_FN_MISSING_EXAMPLES (LOW) - Documented pub fn without Examples section"
+      - "DOC_MODULE_DOC_MISSING (LOW) - File with pub entities but no module doc"
+      - "DOC_PUB_TYPE_MISSING (LOW) - Undocumented pub struct/enum/trait"
+    examples:
+      basic: "uv run rsqt doc-findings"
+      pipe: "uv run rsqt doc-findings | jq -s 'group_by(.rule_id) | map({rule: .[0].rule_id, count: length})'"
+
+  audit:
+    purpose: "Generate comprehensive FINDINGS.jsonl from all deterministic rules (safety + supply-chain + docs)"
+    syntax: "uv run rsqt audit [--min-severity {INFO,LOW,MEDIUM,HIGH,CRITICAL}] [--rule-prefix PREFIX]"
+    flags:
+      --min-severity: "Minimum severity to include (default: all)"
+      --rule-prefix: "Filter by rule ID prefix (e.g., DOC_, UNSAFE_)"
+    rules:
+      safety:
+        - "UNSAFE_BLOCK_PRESENT (HIGH) - File contains unsafe blocks"
+        - "FFI_SURFACE_PRESENT (HIGH) - File has FFI/extern C surface"
+        - "TRANSMUTE_USAGE (HIGH/CRITICAL) - File uses mem::transmute"
+        - "RAW_PTR_USAGE (HIGH) - File uses raw pointers"
+        - "PANIC_IN_PROD (MEDIUM) - Production code has panic!/todo!/unimplemented!"
+      supply_chain:
+        - "BUILD_RS_SUPPLY_CHAIN (HIGH) - build.rs present"
+      documentation: "All rules from doc-findings"
+    examples:
+      all: "uv run rsqt audit"
+      high_only: "uv run rsqt audit --min-severity HIGH"
+      doc_rules_only: "uv run rsqt audit --rule-prefix DOC_"
+      safety_only: "uv run rsqt audit --rule-prefix UNSAFE_"
+
+  transmute:
+    purpose: "Find files using mem::transmute (CRITICAL safety audit — type system bypass)"
+    syntax: "uv run rsqt transmute [--format {text,json}]"
+    examples:
+      basic: "uv run rsqt transmute"
+      json: "uv run rsqt transmute --format json"
+
+  raw-ptrs:
+    purpose: "Find files using *const/*mut raw pointers (safety review)"
+    syntax: "uv run rsqt raw-ptrs [--format {text,json}]"
+    examples:
+      basic: "uv run rsqt raw-ptrs"
+      json: "uv run rsqt raw-ptrs --format json"
+
+  panics:
+    purpose: "Find files using panic! macro (reliability audit — potential crash sites)"
+    syntax: "uv run rsqt panics [--format {text,json}]"
+    examples:
+      basic: "uv run rsqt panics"
+      json: "uv run rsqt panics --format json"
+
+  test-coverage:
+    purpose: "Analyze test coverage — find files without #[test] or #[cfg(test)]"
+    syntax: "uv run rsqt test-coverage [--untested-only] [--format {text,json}]"
+    flags:
+      --untested-only: "Show only files without tests"
+    examples:
+      basic: "uv run rsqt test-coverage"
+      gaps: "uv run rsqt test-coverage --untested-only"
+
+  modules:
+    purpose: "Analyze module type distribution (lib/bin/mod/test)"
+    syntax: "uv run rsqt modules [--type {lib,bin,mod,test,module}] [--format {text,json}]"
+    flags:
+      --type: "Filter by module type"
+    examples:
+      basic: "uv run rsqt modules"
+      lib_only: "uv run rsqt modules --type lib"
+
+  api-surface:
+    purpose: "Show public API surface (pub fn + pub struct + pub trait counts)"
+    syntax: "uv run rsqt api-surface [--format {text,json}]"
+    examples:
+      basic: "uv run rsqt api-surface"
+      json: "uv run rsqt api-surface --format json"
+
+  impls:
+    purpose: "Find files with impl blocks sorted by count (complexity indicator)"
+    syntax: "uv run rsqt impls [--format {text,json}]"
+    examples:
+      basic: "uv run rsqt impls"
+
+  health:
+    purpose: "Composite health dashboard with letter grade (safety + reliability + coverage + API)"
+    syntax: "uv run rsqt health [--format {text,json}]"
+    examples:
+      basic: "uv run rsqt health"
+      json: "uv run rsqt health --format json"
+    note: "Best single command for overall codebase assessment. Combines all risk dimensions."
+
+  risk-hotspots:
+    purpose: "Identify production files needing attention based on weighted risk factors"
+    syntax: "uv run rsqt risk-hotspots [--limit N] [--format {text,json}]"
+    flags:
+      --limit: "Maximum files to show (default: 10)"
+    examples:
+      basic: "uv run rsqt risk-hotspots"
+      top20: "uv run rsqt risk-hotspots --limit 20"
+
+  coverage-risk:
+    purpose: "Identify untested files weighted by public API surface (exposure risk)"
+    syntax: "uv run rsqt coverage-risk [--format {text,json}]"
+    examples:
+      basic: "uv run rsqt coverage-risk"
+      json: "uv run rsqt coverage-risk --format json"
+
+  schemas:
+    purpose: "List JSON output schemas for all commands (FR-4 versioned output)"
+    syntax: "uv run rsqt schemas [--format {text,json}]"
+    flags:
+      --format: "Output format (text or json)"
+    examples:
+      basic: "uv run rsqt schemas"
+      json: "uv run rsqt schemas --format json"
+    use_cases:
+      - "Discover JSON output contract for each command"
+      - "Verify schema versions for CI/CD integration"
+      - "Build downstream tooling against stable output contracts"
+
+# =============================================================================
+# RUST-XREF INTEGRATION
+# =============================================================================
+
+rust_xref:
+  description: "rust-xref provides 36 cross-reference commands that use RSQT.parquet"
+  discovery: "uv run rust-xref --help"
+  key_commands:
+    collect: "Run all commands and generate report folder"
+    doc_quality: "Find hedge words and ambiguity in doc comments"
+    validate_refs: "Validate [Entity] references in doc comments"
+    api_completeness: "Check doc comments have required sections"
+    prod_unwraps: "Find unwrap/expect in production code"
+  example: "uv run rust-xref --rsqt RSQT.parquet collect --regenerate"
+  note: "rust-xref extends rsqt with documentation cross-referencing capabilities"
+  raqt_integration:
+    description: "rust-xref optionally integrates RAQT.parquet for compiler-accurate defs/refs"
+    flag: "--raqt RAQT.parquet (global option, opt-in)"
+    commands:
+      raqt_defs: "Query RAQT semantic definitions (--name, --kind filters)"
+      raqt_refs: "Query RAQT semantic references / call graph (--to-def-id, --from-def-id)"
+      raqt_stats: "Show RAQT index statistics"
+    example: "uv run rust-xref --raqt RAQT.parquet raqt-defs --name Config"
+    note: "Requires separate RAQT.parquet generated via 'uv run raqt generate --full --trusted'"
+
+# =============================================================================
+# ORIENTATION STEPS
+# =============================================================================
+
+steps:
+  step_0:
+    name: "Verify Environment"
+    duration: "10 seconds"
+    writes_files: false
+    command: "uv --version && uv run rsqt --help"
+    stop_conditions:
+      - "If rsqt is not available: stop and install/activate it."
+
+  step_1:
+    name: "Generate Index (Writes Files)"
+    duration: "30 seconds"
+    writes_files: true
+    command: "uv run rsqt generate --full"
+    purpose: "Create RSQT.parquet to make safety and quality surfaces queryable. Source directory is auto-discovered from pyproject.toml."
+    alternatives:
+      custom_dir: "uv run rsqt --target-dir <RSQT_DIR> generate --full"
+    stop_conditions:
+      - "If you need RSQT.parquet in a different directory: use global `--target-dir <dir>` before the subcommand."
+
+  step_2:
+    name: "Verify Index & Stats"
+    duration: "15 seconds"
+    writes_files: false
+    commands:
+      stats: "uv run rsqt stats"
+      verify: "uv run rsqt query --columns file_path --limit 5"
+    purpose: "Confirm coverage, file count, and snapshot proof."
+    verification:
+      - "Check file_count matches expected .rs files"
+      - "If using --format json: verify safety_proof.snapshot_id + safety_proof.verified_at_utc are present"
+      - "Confirm no error messages in output"
+
+  step_3:
+    name: "Unsafe Surface Audit"
+    duration: "15 seconds"
+    writes_files: false
+    commands:
+      list_unsafe: "uv run rsqt unsafe"
+      detailed: "uv run rsqt query --columns file_path unsafe_block_count unsafe_fn_count unsafe_impl_count unsafe_trait_count --limit 20"
+    purpose: "List files with unsafe blocks/functions (highest audit priority)."
+    triage_strategy:
+      - "Sort by unsafe_block_count descending"
+      - "Prioritize non-test files (filter out /tests/)"
+      - "Note files with unsafe_fn (callers must uphold invariants)"
+
+  step_4:
+    name: "FFI Surface Audit"
+    duration: "15 seconds"
+    writes_files: false
+    commands:
+      list_ffi: "uv run rsqt ffi"
+      detailed: "uv run rsqt query --columns file_path extern_c_count no_mangle_count repr_c_count transmute_count raw_ptr_count --limit 20"
+    purpose: "List files with ABI surface (extern C, no_mangle, repr(C), etc.)."
+    triage_strategy:
+      - "Prioritize files with transmute (type system bypass)"
+      - "Note files with static_mut (global mutable state)"
+      - "Check extern_c for ABI boundary correctness"
+
+  step_5:
+    name: "Runtime Risk Analysis"
+    duration: "20 seconds"
+    writes_files: false
+    commands:
+      unwrap_hotspots: "uv run rsqt query --columns file_path unwrap_count expect_count panic_count --limit 30"
+      panic_files: "uv run rsqt query --columns file_path panic_count --limit 20"
+    purpose: "Identify files that could panic at runtime."
+    triage_strategy:
+      - "High unwrap_count in non-test code = risk"
+      - "panic! in library code = poor error handling"
+      - "expect() is slightly better (documents why)"
+
+  step_6:
+    name: "Search & Targeted Analysis"
+    duration: "20 seconds"
+    writes_files: false
+    commands:
+      search_pattern: "uv run rsqt search '<query>' --limit 20"
+      search_unsafe_impl: "uv run rsqt search 'unsafe impl'"
+      search_transmute: "uv run rsqt search 'transmute'"
+    purpose: "Find specific patterns or investigate flagged areas."
+
+  step_7:
+    name: "Superpower: Auto-Refresh on Use"
+    duration: "0 seconds (automatic)"
+    writes_files: true
+    trigger: "Any rsqt command when index is stale (unless --fail-on-stale)"
+    behavior: |
+      When you run an rsqt command and the index is stale (source files newer than parquet):
+      1. rsqt auto-regenerates the index
+      2. Archives the old version to fact_archive/
+      3. Returns fresh results
+    workflow: "Query → Edit → Query (no explicit generate needed)"
+    example: |
+      # Edit a Rust file, then query - auto-refresh happens automatically
+      uv run rsqt unsafe
+      # Output: "Archived stale parquet to fact_archive: ..."
+      #         "rsqt auto-refresh: wrote N file(s)"
+      #         [fresh results including your edit]
+    disable_for_ci: "Use --fail-on-stale flag to disable auto-refresh and fail closed"
+    key_insight: "You never need to manually call 'generate' between edits - just query and auto-refresh handles freshness"
+
+# =============================================================================
+# DECISION TREE
+# =============================================================================
+
+decision_tree:
+  question: "What do I need right now?"
+  branches:
+    safety_audit:
+      trigger: "Where is unsafe/FFI/transmute used?"
+      action: "uv run rsqt unsafe && uv run rsqt ffi"
+      then: "Read only flagged files"
+
+    runtime_risk:
+      trigger: "Where could this panic?"
+      action: "uv run rsqt query --columns file_path unwrap_count panic_count"
+      then: "Review files with high counts"
+
+    specific_pattern:
+      trigger: "Where is X used? (any pattern)"
+      action: "uv run rsqt search '<pattern>'"
+      then: "Read matched locations"
+
+    public_api:
+      trigger: "What's the public surface?"
+      action: "uv run rsqt api-surface"
+      then: "Focus on high-count files"
+
+    overall_health:
+      trigger: "How healthy is this codebase?"
+      action: "uv run rsqt health"
+      then: "Drill into flagged dimensions (safety, reliability, coverage, API)"
+
+    risk_triage:
+      trigger: "Where should I focus review effort?"
+      action: "uv run rsqt risk-hotspots --limit 20"
+      then: "Review top-ranked files first"
+
+    documentation_gaps:
+      trigger: "What needs documentation?"
+      action: "uv run rsqt doc-findings"
+      then: "Fix highest-severity findings first"
+
+    comprehensive_audit:
+      trigger: "Full deterministic audit before release"
+      action: "uv run rsqt audit --min-severity MEDIUM"
+      then: "Address safety findings first, then docs"
+
+    semantics:
+      trigger: "What does this unsafe block DO?"
+      action: "Use rsqt to identify file → read only relevant region"
+
+# =============================================================================
+# ADVANCED WORKFLOWS
+# =============================================================================
+
+workflows:
+  security_audit:
+    name: "Full Security Audit"
+    steps:
+      - "uv run rsqt stats  # Confirm coverage"
+      - "uv run rsqt unsafe  # List unsafe code"
+      - "uv run rsqt ffi  # List FFI boundaries"
+      - "uv run rsqt search 'transmute'  # Find type punning"
+      - "uv run rsqt query --contains 'static mut' --columns file_path static_mut_count"
+    priority_order:
+      - "1. transmute calls (type system bypass)"
+      - "2. static mut (global mutable state)"
+      - "3. unsafe blocks (memory safety)"
+      - "4. FFI boundaries (ABI correctness)"
+
+  pre_release_check:
+    name: "Pre-Release Safety Check"
+    steps:
+      - "uv run rsqt generate --full  # Fresh index"
+      - "uv run rsqt stats  # Verify coverage"
+      - "uv run rsqt unsafe  # Must review all"
+      - "uv run rsqt query --columns file_path unwrap_count --limit 100  # Unwrap audit"
+    acceptance_criteria:
+      - "All unsafe code reviewed and justified"
+      - "No unwrap() in error paths"
+      - "FFI boundaries documented"
+
+  health_and_audit:
+    name: "Health Dashboard + Deterministic Audit"
+    steps:
+      - "uv run rsqt health  # Letter-grade dashboard"
+      - "uv run rsqt risk-hotspots --limit 20  # Files needing attention"
+      - "uv run rsqt audit --min-severity MEDIUM  # Deterministic FINDINGS.jsonl"
+      - "uv run rsqt coverage-risk  # Untested high-API files"
+    interpretation:
+      - "Health grade gives overall signal; drill into specific dimensions"
+      - "risk-hotspots ranks by weighted composite (unsafe + unwrap + panic + API)"
+      - "audit produces machine-readable FINDINGS.jsonl for CI integration"
+
+  refactoring_triage:
+    name: "Refactoring Risk Assessment"
+    steps:
+      - "uv run rsqt query --file <module> --columns file_path has_unsafe has_ffi total_lines"
+      - "uv run rsqt query --file <module> --columns file_path unwrap_count panic_count"
+    interpretation:
+      - "has_unsafe=true: Changes require extra scrutiny"
+      - "has_ffi=true: ABI stability matters"
+      - "high unwrap_count: Error handling needed"
+
+# =============================================================================
+# COMMON MISTAKES
+# =============================================================================
+
+common_mistakes:
+  - mistake: "Reviewing Rust files in alphabetical order"
+    impact: "You spend time on low-risk files and miss high-risk hotspots."
+    solution: "Start with rsqt unsafe/ffi and rank by counts."
+
+  - mistake: "Assuming macro-generated unsafe is captured"
+    impact: "False sense of safety coverage."
+    solution: "Treat RSQT as triage; still review build outputs and generated code paths as needed."
+
+  - mistake: "Ignoring test files in unsafe counts"
+    impact: "Test code with unsafe is different risk than library code."
+    solution: "Use --file filter to separate: --file src vs --file tests"
+
+  - mistake: "Not using global --target-dir for custom locations"
+    impact: "Commands fail with 'file not found' or use wrong index."
+    solution: "Use --target-dir before the subcommand: `rsqt --target-dir <RSQT_DIR> unsafe`"
+
+  - mistake: "Searching before indexing"
+    impact: "Empty or stale results."
+    solution: "Always run generate first, verify with stats."
+
+# =============================================================================
+# QUICK REFERENCE
+# =============================================================================
+
+quick_reference:
+  core_commands:
+    # Indexing & Discovery
+    generate: "generate --full"
+    stats: "stats"
+    columns: "columns"
+    dump: "dump [--output FILE]"
+    # Safety Surface
+    unsafe: "unsafe"
+    ffi: "ffi"
+    transmute: "transmute [--format json]"
+    raw_ptrs: "raw-ptrs [--format json]"
+    panics: "panics [--format json]"
+    # Runtime Risk
+    prod_unwraps: "prod-unwraps"
+    search: "search '<query>' --limit 20"
+    query: "query --columns <cols> [--file <filter>] [--contains <filter>] --limit 50"
+    # Structure & Coverage
+    entities: "entities --stats"
+    modules: "modules [--type {lib,bin,mod,test}]"
+    api_surface: "api-surface [--format json]"
+    impls: "impls [--format json]"
+    test_coverage: "test-coverage [--untested-only]"
+    # Documentation
+    docs: "docs [--format json] [--missing-only]"
+    doc_findings: "doc-findings"
+    # Audit & Dashboards
+    audit: "audit [--min-severity {INFO,LOW,MEDIUM,HIGH,CRITICAL}] [--rule-prefix PREFIX]"
+    health: "health [--format json]"
+    risk_hotspots: "risk-hotspots [--limit N]"
+    coverage_risk: "coverage-risk [--format json]"
+    schemas: "schemas [--format {text,json}]"
+
+  common_queries:
+    triage: "--columns file_path has_unsafe has_ffi unwrap_count panic_count"
+    unsafe_detail: "--columns file_path unsafe_block_count unsafe_fn_count unsafe_impl_count"
+    ffi_detail: "--columns file_path extern_c_count no_mangle_count transmute_count raw_ptr_count"
+    runtime_risk: "--columns file_path unwrap_count expect_count panic_count"
+    public_api: "--columns file_path pub_fn_count pub_struct_count pub_trait_count"
+
+  filter_patterns:
+    by_path: "--file engine/src"
+    by_content: "--contains 'transmute'"
+    combined: "--file ffi --contains 'extern'"
+
+  target_dir_override:
+    note: "Use global --target-dir (before subcommand) to specify RSQT.parquet location"
+    example: "uv run rsqt --target-dir <RSQT_DIR> unsafe"
+
+# =============================================================================
+# KEY TAKEAWAYS
+# =============================================================================
+
+key_takeaways:
+  - "RSQT is your Rust safety radar: query risk surfaces first, then read code with intent."
+  - "27 commands across indexing, safety, runtime risk, structure, documentation, audit, and schema discovery."
+  - "40 columns capture file anchors + entity rows + unsafe, FFI, runtime risks, and public API surface."
+  - "Start with `health` for overall grade, then `risk-hotspots` to prioritize, then `audit` for CI-ready findings."
+  - "Counts guide triage: sort by unsafe_block_count, transmute_count, unwrap_count."
+  - "Use --file to filter by path, --contains to filter by source text."
+  - "Treat RSQT as triage, not exhaustive coverage (macros generate code outside index)."
+  - "Superpower workflow: Query → Edit → Query. Auto-refresh handles regeneration; no manual generate calls needed between edits."

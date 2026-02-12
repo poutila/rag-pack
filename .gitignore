@@ -1,0 +1,37 @@
+/target
+**/*.rs.bk
+
+# === XREF Workflow Generated Artifacts ===
+RSQT.parquet
+MDQT.parquet
+*.parquet
+
+# Workflow state (per-run artifacts)
+XREF_WORKFLOW/xref_state/
+XREF_WORKFLOW/fact_archive/
+XREF_WORKFLOW/*.parquet
+fact_archive/
+
+# XREF_WORKFLOW_II local caches
+XREF_WORKFLOW_II/.uv_cache/
+
+# XREF_WORKFLOW_II workflow state (per-run artifacts)
+XREF_WORKFLOW_II/xref_state/
+XREF_WORKFLOW_II/fact_archive/
+
+# Python bytecode / caches
+__pycache__/
+*.pyc
+# === BEGIN FDP/Analysis Artifacts (enterprise hygiene) ===
+# Patterns below are SSOT-aligned with PLAN_MANIFEST.files_to_untrack
+# Leading / = ROOT-ONLY; no leading / = ANY directory
+# OPTION A ACTIVE: Broad *.parquet added to ignore ALL parquet files
+/.fdp_artifacts/
+**/*.mdqt.*
+**/*.rsqt.*
+/MDQT.parquet*
+/RSQT.parquet*
+/crates/RSQT.parquet*
+*.parquet
+**/*.zip*
+# === END FDP/Analysis Artifacts ===

@@ -1,0 +1,271 @@
+version: 1.0.0
+pack_type: rust_audit_rsqt_mission_addon_part2
+engine: rsqt
+response_schema: 'MANDATORY FIRST LINES (must be first two lines):
+
+  VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+
+  CITATIONS=path:line(-line), path:line(-line), ...
+
+
+  Policy:
+
+  - If a claim cannot be proven from extracted evidence, set VERDICT=INDETERMINATE.
+
+  - Use deterministic evidence only; no speculation.
+
+  - Mission context: prioritize manned Mars orbiter reliability and safe refactoring
+  readiness.'
+defaults:
+  chat_top_k: 12
+  max_tokens: 2200
+  temperature: 0.0
+questions:
+- id: R_MISSION_RAG_1
+  title: RAG Index Build Strategies and Anchor Controls
+  category: rag
+  top_k: 10
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'Verify RAG index build across mission-relevant chunking strategies.
+
+
+    Required output lines:
+
+    RAG_INDEX_EXECUTED=YES|NO|INSUFFICIENT
+
+    CHUNK_STRATEGIES_TESTED=<comma-separated values or INSUFFICIENT>
+
+    INDEX_OUTPUT_PRESENT=YES|NO|INSUFFICIENT
+
+    ANCHOR_CONFIG_USED=YES|NO|INSUFFICIENT
+
+
+    Strategies to confirm from evidence: hybrid, files, entities.'
+  preflight:
+  - name: rag_index_hybrid
+    cmd:
+    - rag-index
+    - '{parquet}'
+    - --output
+    - '{index}'
+    - --chunk-strategy
+    - hybrid
+    render: lines
+    block_max_chars: 6000
+  - name: rag_index_files
+    cmd:
+    - rag-index
+    - '{parquet}'
+    - --output
+    - '{index}'
+    - --chunk-strategy
+    - files
+    - --include-anchor-glob
+    - '**/Cargo.toml'
+    - --anchor-window-lines
+    - '120'
+    - --anchor-overlap-lines
+    - '10'
+    - --max-anchor-chars
+    - '8000'
+    render: lines
+    block_max_chars: 6000
+  - name: rag_index_entities
+    cmd:
+    - rag-index
+    - '{parquet}'
+    - --output
+    - '{index}'
+    - --chunk-strategy
+    - entities
+    - --entity-kinds
+    - fn
+    - struct
+    - trait
+    render: lines
+    block_max_chars: 6000
+  expected_verdict: TRUE_POSITIVE
+- id: R_MISSION_RAG_2
+  title: Retrieval Mode Reliability (semantic/hybrid/literal)
+  category: rag
+  top_k: 12
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'Validate retrieval behavior across semantic, hybrid, and literal modes.
+
+
+    Required output lines:
+
+    RAG_SEMANTIC_RESULTS=<integer or INSUFFICIENT>
+
+    RAG_HYBRID_RESULTS=<integer or INSUFFICIENT>
+
+    RAG_LITERAL_RESULTS=<integer or INSUFFICIENT>
+
+    EXPLAIN_DIAGNOSTICS_PRESENT=YES|NO|INSUFFICIENT
+
+
+    Use only rag-search outputs.'
+  preflight:
+  - name: rag_search_semantic_json
+    cmd:
+    - rag-search
+    - error handling boundary
+    - --top-k
+    - '8'
+    - --format
+    - json
+  - name: rag_search_hybrid_explain_json
+    cmd:
+    - rag-search
+    - cargo workspace feature resolution
+    - --top-k
+    - '8'
+    - --format
+    - json
+    - --retrieval-mode
+    - hybrid
+    - --explain
+  - name: rag_search_literal_json
+    cmd:
+    - rag-search
+    - pub trait
+    - --top-k
+    - '8'
+    - --format
+    - json
+    - --literal
+  expected_verdict: TRUE_POSITIVE
+- id: R_MISSION_RAG_3
+  title: Grounded Chat Contract (Deterministic Stub)
+  category: rag
+  top_k: 12
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'Validate chat contract under deterministic backend for mission planning
+    workflows.
+
+
+    Required output lines:
+
+    CHAT_STUB_JSON=YES|NO|INSUFFICIENT
+
+    CHAT_GROUNDED_PROFILE=YES|NO|INSUFFICIENT
+
+    CHAT_GURU_PROFILE=YES|NO|INSUFFICIENT
+
+    CHAT_CITATIONS_PRESENT=YES|NO|INSUFFICIENT
+
+
+    Use chat outputs only; no speculation.'
+  preflight:
+  - name: chat_help
+    cmd:
+    - chat
+    - --help
+    render: lines
+    block_max_chars: 7000
+  - name: chat_stub_default_json
+    cmd:
+    - chat
+    - List top safety-critical refactor seams
+    - --backend
+    - stub
+    - --top-k
+    - '8'
+    - --format
+    - json
+  - name: chat_stub_grounded_json
+    cmd:
+    - chat
+    - List top safety-critical refactor seams
+    - --backend
+    - stub
+    - --top-k
+    - '8'
+    - --prompt-profile
+    - grounded
+    - --format
+    - json
+  - name: chat_stub_guru_json
+    cmd:
+    - chat
+    - List top safety-critical refactor seams
+    - --backend
+    - stub
+    - --top-k
+    - '8'
+    - --prompt-profile
+    - rust_audit_guru
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+- id: R_MISSION_OPS_4
+  title: Strict JSON and CI Profile Determinism
+  category: mission_ops
+  top_k: 8
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'Validate operational determinism controls used in CI and mission-grade
+    automation.
+
+
+    Required output lines:
+
+    STRICT_JSON_COERCION=OK|BROKEN|INSUFFICIENT
+
+    STRICT_JSON_PARSEABLE=YES|NO|INSUFFICIENT
+
+    PROFILE_CI_RESOLVED_PATHS=YES|NO|INSUFFICIENT
+
+    PROFILE_CI_DOCS_DETERMINISTIC=YES|NO|INSUFFICIENT
+
+
+    Use only strict-json/profile-ci evidence.'
+  preflight:
+  - name: strict_json_stats_text
+    cmd:
+    - --strict-json
+    - stats
+    - --format
+    - text
+    render: lines
+    block_max_chars: 6000
+  - name: strict_json_stats_json
+    cmd:
+    - --strict-json
+    - stats
+    - --format
+    - json
+  - name: profile_ci_stats_json
+    cmd:
+    - --profile
+    - ci
+    - stats
+    - --format
+    - json
+  - name: profile_ci_docs_json
+    cmd:
+    - --profile
+    - ci
+    - docs
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+validation:
+  required_verdicts:
+  - TRUE_POSITIVE
+  - FALSE_POSITIVE
+  - INDETERMINATE
+  citation_format: path:line(-line)
+  fail_on_missing_citations: true
+  enforce_citations_from_evidence: true
+  enforce_no_new_paths: true
+  enforce_paths_must_be_cited: true
+  minimum_questions: 4
+runner:
+  plugin: rsqt_guru
+  plugin_config:
+    rules_path: cfg_rust_audit_rsqt_mission_addon_finding_rules.yaml
+    question_validators_path: cfg_rust_audit_rsqt_mission_addon_question_validators.yaml

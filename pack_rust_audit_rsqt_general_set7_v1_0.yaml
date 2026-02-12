@@ -1,0 +1,300 @@
+version: 1.11.0
+pack_type: rust_audit_general_set7
+engine: rsqt
+response_schema: '--- REQUIRED OUTPUT FORMAT ---
+
+  MANDATORY FIRST LINES (must be the first two lines of your response; copy exactly):
+
+  VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+
+  CITATIONS=path:line(-line), path:line(-line), ...
+
+
+  After those two lines, write the answer body.
+
+
+  Hard bans:
+
+  - Do NOT output Markdown section headers like "Analysis:" or "CITATIONS:".
+
+  - Do NOT invent line numbers or file paths. Only cite tokens that appear in the evidence (including artifact anchors like
+  *.json:1).
+
+  - Do NOT include VERDICT or CITATIONS anywhere else in the body.
+
+
+  Policy:
+
+  - If a claim cannot be proven from extracted evidence, set VERDICT=INDETERMINATE and say "INSUFFICIENT EVIDENCE" + list
+  what is missing.
+
+  - Prefer deterministic extraction evidence; do NOT speculate.
+
+  '
+defaults:
+  chat_top_k: 12
+  max_tokens: 2000
+  temperature: 0.0
+questions:
+- id: R_HEALTH_1
+  title: Codebase Health Grade
+  category: health
+  top_k: 6
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+
+    Provide an executive summary of codebase health.
+
+
+    The evidence shows a composite health analysis with:
+
+    - Overall grade (A+ to F) and score
+
+    - Safety score (unsafe, FFI, transmute, raw pointers)
+
+    - Reliability score (panics, unwraps, expects)
+
+    - Coverage score (test coverage percentage)
+
+    - API surface metrics
+
+
+    Summarize the grade, highlight any areas below 80%, and provide
+
+    1-2 actionable recommendations for improvement.
+
+    '
+  preflight:
+  - name: health_summary
+    cmd:
+    - health
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+- id: R_META_2
+  title: Entity, Module, and Impl Distribution
+  category: meta
+  top_k: 6
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+
+    Show the distribution of:
+
+    1. Entity kinds (fn/struct/trait/impl/enum/macro)
+
+    2. Module types (lib/bin/test/module)
+
+    3. Impl blocks per file (complexity indicator)
+
+
+    Identify whether this looks like a library crate, binary crate, or workspace.
+
+    Note files with high impl counts as potential complexity hotspots.
+
+    '
+  preflight:
+  - name: entity_stats
+    cmd:
+    - entities
+    - --stats
+    - --format
+    - json
+  - name: module_distribution
+    cmd:
+    - modules
+    - --format
+    - json
+  - name: impl_distribution
+    cmd:
+    - impls
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+- id: R_API_1
+  title: Public Surface Counts by File
+  category: api_coverage
+  top_k: 8
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+
+    Which Rust files have the largest public API surface?
+
+
+    The evidence shows files sorted by API surface size with counts:
+
+    - pub_fn_count, pub_struct_count, pub_trait_count
+
+
+    Provide top 10 file paths with their counts and summarize total API surface.
+
+    '
+  preflight:
+  - name: api_surface
+    cmd:
+    - api-surface
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+- id: R_API_2
+  title: Top Public Items (Heuristic)
+  category: api_coverage
+  top_k: 15
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+
+    List examples of public API items (heuristic scan). Provide:
+
+    - up to 10 pub fn signatures
+
+    - up to 10 pub struct declarations
+
+    - up to 10 pub trait declarations
+
+    - up to 10 pub enum declarations
+
+
+    Use the extracted signature/line_text present in evidence; do NOT require full source files.
+
+    Include file:line citations.
+
+    '
+  preflight:
+  - name: fn_entities
+    cmd:
+    - entities
+    - --kind
+    - fn
+    - --limit
+    - '30'
+    - --format
+    - json
+  - name: struct_entities
+    cmd:
+    - entities
+    - --kind
+    - struct
+    - --limit
+    - '30'
+    - --format
+    - json
+  - name: trait_entities
+    cmd:
+    - entities
+    - --kind
+    - trait
+    - --limit
+    - '20'
+    - --format
+    - json
+  - name: enum_entities
+    cmd:
+    - entities
+    - --kind
+    - enum
+    - --limit
+    - '20'
+    - --format
+    - json
+  - name: pub_fn_hits
+    cmd:
+    - search
+    - 'pub fn '
+    - --limit
+    - '50'
+    - --format
+    - json
+  - name: pub_struct_hits
+    cmd:
+    - search
+    - 'pub struct '
+    - --limit
+    - '50'
+    - --format
+    - json
+  - name: pub_trait_hits
+    cmd:
+    - search
+    - 'pub trait '
+    - --limit
+    - '30'
+    - --format
+    - json
+  - name: pub_enum_hits
+    cmd:
+    - search
+    - 'pub enum '
+    - --limit
+    - '30'
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+- id: R_RISK_1
+  title: Risk Hotspots Analysis
+  category: safety
+  top_k: 8
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+
+    Identify the highest-risk production files based on weighted factors.
+
+
+    The evidence shows files ranked by risk score combining:
+
+    - unwrap/panic usage
+
+    - unsafe code presence
+
+    - transmute usage
+
+    - test coverage gaps
+
+    - public API exposure
+
+
+    For the top 5 hotspots:
+
+    1. List file path and risk score
+
+    2. Identify the primary risk factors
+
+    3. Recommend specific mitigation (add tests, reduce unwraps, etc.)
+
+
+    If no hotspots found (all scores near 0), state: "No significant risk hotspots detected."
+
+    '
+  preflight:
+  - name: risk_hotspots
+    cmd:
+    - risk-hotspots
+    - --format
+    - json
+    - --limit
+    - '10'
+  expected_verdict: TRUE_POSITIVE
+validation:
+  required_verdicts:
+  - TRUE_POSITIVE
+  - FALSE_POSITIVE
+  - INDETERMINATE
+  citation_format: path:line(-line)
+  fail_on_missing_citations: true
+  enforce_citations_from_evidence: true
+  enforce_no_new_paths: true
+  enforce_paths_must_be_cited: true
+  minimum_questions: 5
+runner:
+  plugin: rsqt_guru
+  plugin_config:
+    rules_path: cfg_rust_audit_rsqt_general_finding_rules.yaml
+    question_validators_path: cfg_rust_audit_rsqt_general_question_validators.yaml

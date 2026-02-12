@@ -1,0 +1,225 @@
+version: 1.11.0
+pack_type: rust_audit_general_set4
+engine: rsqt
+response_schema: '--- REQUIRED OUTPUT FORMAT ---
+
+  MANDATORY FIRST LINES (must be the first two lines of your response; copy exactly):
+
+  VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+
+  CITATIONS=path:line(-line), path:line(-line), ...
+
+
+  After those two lines, write the answer body.
+
+
+  Hard bans:
+
+  - Do NOT output Markdown section headers like "Analysis:" or "CITATIONS:".
+
+  - Do NOT invent line numbers or file paths. Only cite tokens that appear in the evidence (including artifact anchors like
+  *.json:1).
+
+  - Do NOT include VERDICT or CITATIONS anywhere else in the body.
+
+
+  Policy:
+
+  - If a claim cannot be proven from extracted evidence, set VERDICT=INDETERMINATE and say "INSUFFICIENT EVIDENCE" + list
+  what is missing.
+
+  - Prefer deterministic extraction evidence; do NOT speculate.
+
+  '
+defaults:
+  chat_top_k: 12
+  max_tokens: 2000
+  temperature: 0.0
+questions:
+- id: R_SAFE_6
+  title: Detailed Unsafe Breakdown
+  category: safety
+  top_k: 8
+  advice_mode: llm
+  question: 'RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+
+    Provide detailed breakdown of unsafe code by category:
+
+    - unsafe fn declarations (functions declared as unsafe)
+
+    - unsafe impl blocks (impl blocks for unsafe traits)
+
+    - unsafe trait declarations (traits requiring unsafe impl)
+
+    - unsafe blocks within safe functions
+
+
+    Summarize which category dominates and assess overall safety posture.
+
+    If all counts are zero, state: "No unsafe code detected in any category."
+
+    '
+  preflight:
+  - name: unsafe_breakdown
+    cmd:
+    - query
+    - --columns
+    - file_path
+    - unsafe_fn_count
+    - unsafe_impl_count
+    - unsafe_trait_count
+    - unsafe_block_count
+    - --limit
+    - '100'
+    - --format
+    - json
+  - name: unsafe_fn_hits
+    cmd:
+    - search
+    - 'unsafe fn '
+    - --limit
+    - '40'
+    - --format
+    - json
+  - name: unsafe_impl_hits
+    cmd:
+    - search
+    - 'unsafe impl '
+    - --limit
+    - '40'
+    - --format
+    - json
+  - name: unsafe_trait_hits
+    cmd:
+    - search
+    - 'unsafe trait '
+    - --limit
+    - '20'
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+- id: R_TEST_1
+  title: Test Coverage and Exposure Risk
+  category: testing
+  top_k: 10
+  answer_mode: deterministic
+  advice_mode: llm
+  question: "MANDATORY FIRST LINES (write these two lines first, before any analysis; copy exactly):\nVERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE\n\
+    CITATIONS=path:line(-line), path:line(-line), ...\n\nAnalyze test coverage and untested API exposure using ONLY the evidence.\n\
+    \n1) Coverage metrics:\n   - Percentage of files that have tests\n   - Whether testing appears well-distributed (brief\
+    \ justification)\n\n2) Exposure risk (untested public APIs):\n   - Top 5 untested files by public API surface / exposure\
+    \ score (from evidence)\n   - Total exposure score (from evidence)\n\n3) Recommendations:\n   - Prioritize untested files\
+    \ by exposure risk for test-writing recommendations (top 3).\n\nRules:\n- CITATIONS must be a single comma-separated line\
+    \ (no bullets, no backticks, no annotations).\n- Prefer real file:line tokens; if only CITE= tokens exist, cite those\
+    \ verbatim.\n"
+  preflight:
+  - name: test_coverage
+    cmd:
+    - test-coverage
+    - --format
+    - json
+  - name: coverage_risk
+    cmd:
+    - coverage-risk
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+- id: R_TEST_2
+  title: Integration Test Directories
+  category: testing
+  top_k: 10
+  advice_mode: llm
+  question: 'RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+
+    Identify integration test directories and files (heuristic):
+
+    - any files under `tests/`
+
+    - any crate-specific `crates/*/tests/`
+
+
+    Provide file path list and describe test intent from nearby names.
+
+    '
+  preflight:
+  - name: tests_dir_hits
+    cmd:
+    - search
+    - /tests/
+    - --limit
+    - '120'
+    - --format
+    - json
+  - name: mod_tests_hits
+    cmd:
+    - search
+    - mod tests
+    - --limit
+    - '120'
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+- id: R_CARGO_1
+  title: Workspace Members and Editions
+  category: cargo
+  top_k: 8
+  advice_mode: llm
+  question: 'RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+
+    Summarize workspace composition:
+
+    - list workspace members (if present)
+
+    - list crate editions encountered (2021/2024/2018)
+
+
+    Use evidence from Cargo.toml files only.
+
+    '
+  preflight:
+  - name: workspace_blocks
+    cmd:
+    - query
+    - --file
+    - Cargo.toml
+    - --contains
+    - '[workspace]'
+    - --include-all-files
+    - --columns
+    - file_path
+    - line_start
+    - line_end
+    - source_text
+    - --limit
+    - '80'
+    - --format
+    - json
+  - name: edition_hits
+    cmd:
+    - search
+    - edition = "
+    - --include-all-files
+    - --limit
+    - '80'
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+validation:
+  required_verdicts:
+  - TRUE_POSITIVE
+  - FALSE_POSITIVE
+  - INDETERMINATE
+  citation_format: path:line(-line)
+  fail_on_missing_citations: true
+  enforce_citations_from_evidence: true
+  enforce_no_new_paths: true
+  enforce_paths_must_be_cited: true
+  minimum_questions: 4
+runner:
+  plugin: rsqt_guru
+  plugin_config:
+    rules_path: cfg_rust_audit_rsqt_general_finding_rules.yaml
+    question_validators_path: cfg_rust_audit_rsqt_general_question_validators.yaml

@@ -1,0 +1,346 @@
+runner:
+  version: "3.2.0"
+  hash_chunk_size: 8192
+  replicate:
+    default_seeds: [42, 123, 456]
+    seed_prefix: "seed_"
+  quote_bypass:
+    mode_labels:
+      auto: "AUTO"
+      on: "QUOTE_BYPASS"
+      off: "STANDARD"
+    mode_choices: ["auto", "on", "off"]
+    default_mode: "auto"
+    evidence_empty_gate_default: true
+  evidence_presence_gate:
+    fail_on_empty_evidence: true
+    fail_fast: true
+  logging:
+    level: "INFO"
+    field_max_chars: 320
+    question_max_chars: 260
+    prompt_max_chars: 420
+    path_sample_items: 5
+    to_file: true
+    filename: "RUN_LOG.txt"
+    stderr_noise_patterns:
+      - '^raqt:\s+using\b'
+    evidence_delivery_audit:
+      enabled: true
+      filename_suffix: "_evidence_delivery_audit.json"
+      summary_filename: "EVIDENCE_DELIVERY_SUMMARY.json"
+      sample_items: 12
+      parquet_scan_batch_size: 4096
+      parquet_path_universe_cap: 250000
+  advice_quality_gate:
+    enabled: true
+    mission_pack_type_regex: "(?i)mission"
+    require_llm_advice_mode: true
+    retry_on_validation_fail: true
+    retry_attempts: 1
+    retry_issue_bullets: 8
+    min_concrete_issues_when_evidence: 2
+    min_issue_words: 4
+    required_issue_fields: ["ISSUE", "WHY_IT_MATTERS", "PATCH_SKETCH", "TEST_PLAN", "CITATIONS"]
+    praise_phrases:
+      - "you are doing fine"
+      - "you are doing great"
+      - "looks good"
+      - "great job"
+      - "nice work"
+      - "very nice"
+      - "solid work"
+      - "well done"
+    generic_issue_phrases:
+      - "improve error handling"
+      - "add more tests"
+      - "improve documentation"
+      - "refactor this code"
+      - "consider improvements"
+      - "optimize performance"
+    imperative_verbs:
+      - "replace"
+      - "add"
+      - "remove"
+      - "enforce"
+      - "introduce"
+      - "refactor"
+      - "migrate"
+      - "implement"
+      - "guard"
+      - "ban"
+      - "split"
+      - "rename"
+      - "pin"
+      - "enable"
+      - "disable"
+      - "write"
+      - "test"
+      - "assert"
+      - "validate"
+      - "harden"
+  manifest:
+    schema_version: "1.1"
+    filename: "RUN_MANIFEST.json"
+  reports:
+    report_file: "REPORT.md"
+    stability_file: "STABILITY_SUMMARY.md"
+    guru_metrics_file: "GURU_METRICS.json"
+    guru_stability_file: "GURU_STABILITY_SUMMARY.md"
+    pack_stability_title: "Pack Stability Summary"
+    guru_stability_title: "Guru Stability Summary"
+  defaults:
+    pack_file: "pack_rust_audit_rsqt_general_v1_6_explicit.yaml"
+    engine_specs_file: "engine_specs.yaml"
+    system_prompt_file: "prompts/RUST_GURU_SYSTEM.md"
+    grounding_prompt_file: "prompts/RUST_GURU_GROUNDING.md"
+    analyze_prompt_file: "prompts/RUST_GURU_ANALYZE_ONLY.md"
+    out_dir_name: "xref_state"
+    parquet_file: "RSQT.parquet"
+    index_file: ".rsqt.faiss"
+    backend: "ollama"
+    model: "strand-iq4xs:latest"
+    prompt_profile: "grounded"
+    top_p: 1.0
+    chat_top_k_initial: 8
+    preflight_max_chars: 1600
+  path_aliases:
+    rust_audit_pack_general_v1_6.explicit.yaml: "pack_rust_audit_rsqt_general_v1_6_explicit.yaml"
+    rust_audit_extension_3q.yaml: "pack_rust_audit_rsqt_extension_3q.yaml"
+    rust_audit_rsqt_mission_addon_part1.yaml: "pack_rust_audit_rsqt_mission_addon_part1_v1_0.yaml"
+    rust_audit_rsqt_mission_addon_part2.yaml: "pack_rust_audit_rsqt_mission_addon_part2_v1_0.yaml"
+    rust_audit_raqt.yaml: "pack_rust_audit_raqt.yaml"
+    rust_audit_raqt_mission.yaml: "pack_rust_audit_raqt_mission_v1_0.yaml"
+    rsqt_question_validators.yaml: "cfg_rust_audit_rsqt_general_question_validators.yaml"
+    rsqt_finding_rules.yaml: "cfg_rust_audit_rsqt_general_finding_rules.yaml"
+    rsqt_question_validators_ext3q.yaml: "cfg_rust_audit_rsqt_extension_3q_question_validators.yaml"
+    rsqt_finding_rules_ext3q.yaml: "cfg_rust_audit_rsqt_extension_3q_finding_rules.yaml"
+    rsqt_question_validators_raqt.yaml: "cfg_rust_audit_raqt_question_validators.yaml"
+    rsqt_finding_rules_raqt.yaml: "cfg_rust_audit_raqt_finding_rules.yaml"
+    rsqt_question_validators_raqt_mission.yaml: "cfg_rust_audit_raqt_mission_question_validators.yaml"
+    rsqt_finding_rules_raqt_mission.yaml: "cfg_rust_audit_raqt_mission_finding_rules.yaml"
+  env:
+    default: {}
+    by_engine: {}
+    auto_detect_exec:
+      raqt:
+        RUST_ANALYZER_PATH: "rust-analyzer"
+    auto_detect_sha256:
+      raqt:
+        RUST_ANALYZER_SHA256: "RUST_ANALYZER_PATH"
+
+pack_defaults:
+  chat_top_k: 12
+  max_tokens: 1024
+  temperature: 0.0
+
+pack_validation:
+  required_verdicts: ["TRUE_POSITIVE", "FALSE_POSITIVE", "INDETERMINATE"]
+  citation_format: "path:line(-line)"
+  fail_on_missing_citations: true
+  enforce_citations_from_evidence: true
+  enforce_no_new_paths: true
+  enforce_paths_must_be_cited: true
+  minimum_questions: 0
+
+question_modes:
+  answer: ["llm", "deterministic"]
+  advice: ["none", "llm"]
+
+engine_defaults:
+  chat_subcommand: "chat"
+  parquet_flag: "--rsqt"
+  index_flag: "--index"
+  backend_flag: "--backend"
+  top_k_flag: "--top-k"
+  model_flag: "--model"
+  system_prompt_flag: "--system-prompt-file"
+  max_tokens_flag: "--max-tokens"
+  temperature_flag: "--temperature"
+  format_flag: "--format"
+  format_value: "json"
+  prompt_profile_flag: "--prompt-profile"
+  top_p_flag: "--top-p"
+  num_ctx_flag: "--num-ctx"
+  preflight_needs_index_cmds: ["rag-search", "chat"]
+
+validators:
+  question_validators_default_filename: "cfg_rust_audit_rsqt_general_question_validators.yaml"
+  citation_token_regex: '(?:(?:file|path):)?[A-Za-z0-9_./\-]+:\d+(?:-\d+)?'
+  pathline_regex: '^(?P<path>[^\s:]+(?:/[^\s:]+)*):(?P<a>\d+)(?:-(?P<b>\d+))?$'
+  file_path_regex: '(?<![A-Za-z0-9_.\-])((?:[A-Za-z0-9_.\-]+/)*[A-Za-z0-9_.\-]+\.(?:rs|toml|ya?ml|json|md|lock|sh|py))(?![A-Za-z0-9_.\-])'
+  issue_caps:
+    invalid_citations: 6
+    unknown_citations: 8
+    unknown_paths: 10
+    uncited_paths: 10
+    adaptive_rerun_bullets: 8
+    sources: 20
+    deterministic_citations: 5
+    unknown_key_fields: 5
+    git_short_sha: 7
+    advice_top_k_cap: 8
+
+preflight:
+  default_test_path_patterns:
+    - '(^|/)(tests)(/|$)'
+    - '(^|/)(testdata|fixtures)(/|$)'
+    - '(^|/)[^/]*_tests?\.rs$'
+    - '(^|/)test_[^/]+\.rs$'
+  default_exclude_path_regex:
+    - '(^|/)audit_runs(/|$)'
+    - '(^|/)xref_state(/|$)'
+  filtered_to_zero_fail:
+    enabled: true
+    raw_rows_threshold: 20
+    fail_fast: true
+  corpus_scope_gate:
+    enabled: true
+    fail_fast: true
+    require_path_universe: true
+    forbidden_path_regex:
+      - '(^|/)audit_runs(/|$)'
+      - '(^|/)xref_state(/|$)'
+    sample_items: 12
+  dynamic_key_discovery:
+    enabled: true
+    from_engine_registry: true
+    from_parquet_schema: true
+    from_preflight_payloads: true
+    require_engine_schema_contract: true
+    allow_engine_registry_fallback: false
+    fail_on_missing_semantic_categories: true
+    required_semantic_categories: ["path_keys", "line_keys", "snippet_keys"]
+    max_keys_per_category: 64
+    path_hint_terms: ["path", "file", "uri", "title"]
+    line_hint_terms: ["line", "lineno", "line_number", "line_start", "line_end"]
+    snippet_hint_terms: ["snippet", "text", "source", "doc", "signature", "content", "body"]
+    row_container_hint_terms: ["rows", "results", "entities", "items", "files", "sources", "hits", "matches", "data"]
+    always_include_path_keys: []
+    always_include_line_keys: []
+    always_include_snippet_keys: []
+  iter_rows_keys: []
+  has_hits_count_keys: []
+  row_count_keys: []
+  path_keys: []
+  line_keys: []
+  snippet_keys: []
+  transform_filter_keys:
+    - "include_path_regex"
+    - "exclude_path_regex"
+    - "exclude_test_files"
+    - "exclude_comments"
+    - "require_contains"
+    - "require_regex"
+    - "group_by_path_top_n"
+    - "filter_fn"
+  group_by_path_defaults:
+    top_n: 5
+    per_path: 5
+
+evidence_format:
+  default_render_mode: "list"
+  max_chars:
+    list: 1600
+    block: 8000
+    lines: 4000
+    json: 10000
+    evidence_block: 1600
+  shorten:
+    default: 200
+    signature: 120
+    doc: 100
+    line_text: 200
+
+prompts:
+  retrieved_sources_header: "RETRIEVED SOURCES (authoritative; cite these sections):"
+  response_format_header: "RESPONSE FORMAT (MUST FOLLOW EXACTLY)"
+  response_format_cite_rule: "If evidence provides CITE=..., cite that token verbatim (without the CITE= prefix)."
+  question_header: "QUESTION:"
+  mandatory_procedure: |-
+    MANDATORY PROCEDURE:
+    1) Before any explanation, paste the required quoted code/text verbatim from the Sections above.
+    2) If you cannot quote it verbatim, output NOT FOUND and stop.
+    3) After quoting, provide the answer body.
+  quote_bypass:
+    title: "QUOTE-BYPASS MODE"
+    preamble: |-
+      The following evidence has been deterministically extracted from the corpus.
+      You MUST NOT output 'NOT FOUND' - the evidence IS present below.
+      Your task: Use the evidence and answer the question.
+    evidence_header: "EVIDENCE (authoritative)"
+    instructions:
+      - "1. Reference the evidence above to answer the question."
+      - "2. If the question asks for text/definitions, repeat the relevant parts from Evidence."
+      - "3. If evidence is insufficient, say INSUFFICIENT EVIDENCE and list what's missing."
+  deterministic_answer:
+    verdict: "INDETERMINATE"
+    note: "question.answer_mode=deterministic; model answer generation was skipped."
+    fallback_suffix: "_preflight.json:1"
+  advice_prompt:
+    no_evidence_text: "(no evidence blocks available)"
+    text: |-
+      RUST IMPROVEMENT ADVICE MODE
+
+      You are a strict Rust reviewer for mission-grade systems.
+      Your job is corrective guidance, not praise.
+      Do not restate the audit answer.
+
+      REQUIRED OUTPUT FORMAT (plain text):
+      ISSUE_1=...
+      WHY_IT_MATTERS_1=...
+      PATCH_SKETCH_1=...
+      TEST_PLAN_1=...
+      CITATIONS_1=<copy citation tokens from evidence, e.g. crates/engine/src/store.rs:25-30>
+      ISSUE_2=... (optional)
+      WHY_IT_MATTERS_2=... (optional)
+      PATCH_SKETCH_2=... (optional)
+      TEST_PLAN_2=... (optional)
+      CITATIONS_2=<copy citation tokens from evidence> (optional)
+      ISSUE_3=... (optional)
+      WHY_IT_MATTERS_3=... (optional)
+      PATCH_SKETCH_3=... (optional)
+      TEST_PLAN_3=... (optional)
+      CITATIONS_3=<copy citation tokens from evidence> (optional)
+
+      RULES:
+      - Return at least ISSUE_1 and ISSUE_2 unless evidence is insufficient.
+      - Max 3 issues.
+      - Do not write compliments or generic praise.
+      - Each ISSUE must be an imperative fix statement (for example: "Replace panic path with Result propagation").
+      - Prefer Rust-idiomatic suggestions (error conversions, trait boundaries, async/thread safety, testing seams).
+      - PATCH_SKETCH should name concrete Rust targets (module/function/type/test names) when evidence allows.
+      - TEST_PLAN must include at least one failing test condition and one success condition.
+      - CITATIONS_n must be copied verbatim from evidence tokens (look for lines starting with "CITE="); do NOT invent tokens.
+      - Every issue must include at least one such citation token.
+      - If evidence is insufficient for an issue, do not include that issue.
+  evidence_empty_answer: |-
+    **NOT FOUND**
+
+    Deterministic evidence extraction returned no results. Model call skipped.
+  adaptive_rerun:
+    preamble: |-
+      IMPORTANT:
+      - Follow the required response schema exactly (VERDICT/CITATIONS first).
+      - If evidence is present, do not output NOT FOUND.
+      - Ensure CITATIONS tokens are path:line(-line).
+    issues_header: "Validation issues to fix in this rerun:"
+  schema_retry:
+    initial_preamble: |-
+      OUTPUT CONTRACT OVERRIDE:
+      - Return plain text only (no markdown headers/bullets).
+      - First line must be VERDICT=...
+      - Second line must be CITATIONS=...
+      - CITATIONS must only use tokens from CITE= evidence lines.
+    preamble: |-
+      SCHEMA RETRY MODE:
+      - Fix all validation issues listed below.
+      - Preserve factual claims; only repair format/citations as needed.
+      - Return plain text only.
+    template_header: "STRICT RESPONSE TEMPLATE (MUST MATCH)"
+    issues_header: "Validation issues to fix in this retry:"
+    max_issue_bullets: 8
+
+plugin:
+  known_plugins: ["rsqt_guru"]
+  disable_aliases: ["", "none", "null", "no", "false", "off"]

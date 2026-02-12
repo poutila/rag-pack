@@ -1,0 +1,415 @@
+version: 1.0.2
+pack_type: rust_audit_raqt
+engine: raqt
+response_schema: '--- REQUIRED OUTPUT FORMAT ---
+
+  MANDATORY FIRST LINES (must be the first two lines of your response; copy exactly):
+
+  VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+
+  CITATIONS=repo/path.rs:line(-line), repo/path.rs:line(-line), ...
+
+  After those two lines, write the answer body.
+
+  ---
+
+  Policy:
+
+  - If a claim cannot be proven from extracted evidence, set VERDICT=INDETERMINATE.
+
+  - Prefer deterministic extraction evidence; do NOT speculate.
+
+  Hard bans:
+
+  - Do NOT output Markdown section headers like **Analysis:** or **CITATIONS:**.
+
+  - Do NOT bold the schema lines.
+
+  - Do NOT use markdown headings anywhere in the body (`#`, `##`, `###`, `**Heading:**`).
+
+  - Do NOT prefix citation tokens with literal "file:" or "path:"; use repo/path.rs:line(-line) only (e.g., crates/engine/src/error.rs:18).
+
+  - If you mention any repo file path in the answer body, include that same path as a path:line token in CITATIONS.
+
+  '
+defaults:
+  chat_top_k: 12
+  max_tokens: 2500
+  temperature: 0.0
+questions:
+- id: R_BOUNDARY_1
+  title: Cross-Crate Error Propagation Analysis
+  category: error_handling
+  top_k: 15
+  answer_mode: deterministic
+  advice_mode: llm
+  question: |
+    MANDATORY FIRST LINES (write these two lines first, before any analysis; copy exactly):
+    VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+    CITATIONS=repo/path.rs:line(-line), repo/path.rs:line(-line), ...
+
+    Assess cross-crate error propagation using ONLY evidence.
+
+    The evidence is organized as:
+    A) raqt_error_variants: Error enum/type definitions from RAQT (focused)
+    B) raqt_trait_impls: RAQT impl blocks filtered to "impl From<...>"
+    C) raqt_cross_refs: RAQT cross-reference sample rows (focused)
+    D) from_impls: RSQT text search for "impl From<" lines
+    E) error_type_defs: RSQT text search for error enum definitions
+    F) boundary_usage: RSQT text search for boundary conversion usage (map_err / Error)
+
+    YOUR TASK (extract from evidence, do NOT invent):
+
+    1) FROM<> INVENTORY (REQUIRED):
+       - From raqt_trait_impls + from_impls: list EVERY "impl From<..." implementation you find.
+       - Write each on its own line exactly as an impl signature.
+       - Do NOT summarize this section.
+
+    2) BOUNDARY COMPLETENESS (answer each sub-question explicitly):
+       - Does engine→cli have a From<engine::Error> for cli::CliError? Answer YES or NO with citation.
+       - Does engine→gui have a From<engine::Error> for gui::CommandError? Answer YES or NO with citation.
+       - If missing, which boundary lacks the conversion?
+
+    3) CROSS-CRATE USAGE SIGNALS:
+       - List up to 5 evidence lines indicating error propagation/call boundaries (from raqt_cross_refs and/or boundary_usage).
+       - For each line, include path:line and one short note.
+
+    OUTPUT CONTRACT (all lines required exactly once; plain text only):
+    - ENGINE_TO_CLI_FROM=YES|NO|INSUFFICIENT
+    - ENGINE_TO_GUI_FROM=YES|NO|INSUFFICIENT
+    - MISSING_BOUNDARIES=<comma-separated boundary labels or NONE>
+
+    RESPONSE TEMPLATE (copy and fill, plain text; no markdown headings):
+    ENGINE_TO_CLI_FROM=YES|NO|INSUFFICIENT
+    ENGINE_TO_GUI_FROM=YES|NO|INSUFFICIENT
+    MISSING_BOUNDARIES=...
+    FROM_IMPL_1=impl From<...> for ...
+    FROM_IMPL_2=impl From<...> for ...
+    USAGE_1=path:line | short note
+    USAGE_2=path:line | short note
+
+    Rules:
+    - Every claim must be supported by citations from evidence.
+    - If evidence is aggregate/file-only, cite the CITE= token verbatim.
+    - Do not speculate beyond evidence.
+    - Do NOT summarize — enumerate each item individually. A 2-sentence summary is NOT acceptable.
+    - No markdown headers. No `**Analysis:**`. No `**Citations:**`.
+
+  preflight:
+  - name: raqt_error_variants
+    cmd:
+    - defs
+    - --kind
+    - enum
+    - --name
+    - Error
+    - --format
+    - json
+    transform:
+      max_items: 20
+      max_chars: 2600
+  - name: raqt_trait_impls
+    cmd:
+    - defs
+    - --kind
+    - object
+    - --name
+    - 'impl From<'
+    - --format
+    - json
+    transform:
+      max_items: 30
+      max_chars: 3600
+  - name: raqt_cross_refs
+    cmd:
+    - refs
+    - --format
+    - json
+    transform:
+      require_regex:
+      - (?i)main
+      - (?i)run_cli
+      max_items: 20
+      max_chars: 2600
+  - name: from_impls
+    engine_override: rsqt
+    cmd:
+    - search
+    - 'impl From<'
+    - --limit
+    - '40'
+    - --format
+    - json
+    transform:
+      max_items: 30
+      max_chars: 3600
+  - name: error_type_defs
+    engine_override: rsqt
+    cmd:
+    - search
+    - enum Error
+    - --limit
+    - '30'
+    - --format
+    - json
+    transform:
+      max_items: 20
+      max_chars: 2200
+  - name: boundary_usage
+    engine_override: rsqt
+    cmd:
+    - search
+    - .map_err(
+    - --limit
+    - '120'
+    - --format
+    - json
+    render: lines
+    block_max_chars: 5000
+    transform:
+      exclude_test_files: true
+      exclude_comments: true
+      require_regex:
+      - (?i)(CommandError|CliError|Error)
+      max_items: 25
+  expected_verdict: TRUE_POSITIVE
+
+- id: R_PORTS_1
+  title: Dependency Injection Port Coverage
+  category: architecture
+  top_k: 15
+  answer_mode: deterministic
+  advice_mode: llm
+  question: |
+    MANDATORY FIRST LINES (write these two lines first, before any analysis; copy exactly):
+    VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+    CITATIONS=repo/path.rs:line(-line), repo/path.rs:line(-line), ...
+
+    Assess dependency injection port coverage using ONLY evidence.
+
+    The evidence is organized as:
+    A) raqt_traits: Compiler-accurate trait (interface) definitions
+    B) raqt_trait_impls: All impl blocks including "impl TraitName for Type"
+    C) trait_search: Text search for trait definitions (rsqt heuristic)
+    D) dyn_usage: Box<dyn Trait> usage sites
+
+    YOUR TASK (extract from evidence, do NOT invent):
+
+    1) PORT TRAIT INVENTORY:
+       - From raqt_traits: list EVERY trait definition with file location. Write each one on its own line.
+       - Classify each: PRODUCTION PORT (used for DI) vs INTERNAL TRAIT (utility).
+       - A production port typically has multiple implementors including test fakes.
+       - MUST name every trait found in evidence — do NOT say "also present" or "etc."
+
+    2) IMPLEMENTATION COVERAGE:
+       - From raqt_trait_impls: for EACH production port trait, list ALL "impl Trait for Type" entries.
+       - Classify each impl as: REAL (production), FAKE (in deps.rs or test utils), TEST (in tests/).
+       - Give a count per trait: N real, M fake, K test.
+       - Flag any port trait with 0 test fakes (untestable via DI).
+
+    3) TESTABILITY ASSESSMENT:
+       - Write exactly: RATING=FULLY_TESTABLE or RATING=MOSTLY_TESTABLE or RATING=GAPS_EXIST
+       - For each port: can integration tests swap the real impl for a fake?
+       - Are Arc<T> blanket impls present for thread-safe sharing?
+
+    Rules:
+    - Every claim must be supported by citations from evidence.
+    - Do not speculate beyond evidence.
+    - CITATIONS must be a single comma-separated line.
+    - Do NOT summarize — list each trait and each impl individually.
+
+  preflight:
+  - name: raqt_traits
+    cmd:
+    - defs
+    - --kind
+    - interface
+    - --format
+    - json
+  - name: raqt_trait_impls
+    cmd:
+    - defs
+    - --kind
+    - object
+    - --format
+    - json
+  - name: trait_search
+    engine_override: rsqt
+    cmd:
+    - search
+    - 'pub trait '
+    - --limit
+    - '30'
+    - --format
+    - json
+  - name: dyn_usage
+    engine_override: rsqt
+    cmd:
+    - search
+    - 'Box<dyn '
+    - --limit
+    - '30'
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+
+- id: R_TRAIT_1
+  title: Trait Implementation Completeness
+  category: architecture
+  top_k: 15
+  answer_mode: deterministic
+  advice_mode: llm
+  question: |
+    MANDATORY FIRST LINES (write these two lines first, before any analysis; copy exactly):
+    VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+    CITATIONS=repo/path.rs:line(-line), repo/path.rs:line(-line), ...
+
+    Assess trait implementation completeness using ONLY evidence.
+
+    The evidence is organized as:
+    A) raqt_all_impls: Compiler-accurate impl blocks (impl Trait for Type, impl Type) with file locations
+    B) raqt_all_structs: Compiler-accurate struct definitions with file locations
+    C) raqt_all_enums: Compiler-accurate enum definitions with file locations
+    D) derive_search: Text search for #[derive(...)] lines (rsqt heuristic)
+
+    YOUR TASK (extract from evidence, do NOT invent):
+
+    1) STANDARD TRAIT INVENTORY:
+       - From raqt_all_impls + display_impls + default_impls + debug_impls:
+         list each relevant impl line visible in evidence containing Debug/Clone/Display/Default/Serialize/Deserialize.
+       - From derive_search: list the #[derive(...)] lines that auto-derive these traits.
+       - Classify each impl as DERIVED (appears in derive_search) or HAND-WRITTEN (in impl evidence only).
+
+    2) COVERAGE GAPS:
+       - From raqt_all_structs + raqt_all_enums: count total public structs and enums.
+       - Cross-reference against raqt_all_impls + derive_search: which public types LACK Debug?
+         MUST name each type that lacks Debug — do NOT say "some types lack Debug."
+       - Flag any error enum (name contains "Error") that lacks Display — name it.
+       - Flag any config/settings struct that lacks Default — name it.
+
+    3) COMPLETENESS ASSESSMENT:
+       - Write exactly: RATING=COMPLETE or RATING=MOSTLY_COMPLETE or RATING=GAPS_EXIST
+       - Give concrete counts: "N of M public types have Debug."
+       - Are error types Display-ready for thiserror/anyhow? Name which are and which are not.
+       - Are config types Default-ready for builder patterns?
+       - Include an explicit Display inventory line even if empty.
+
+    OUTPUT CONTRACT (must be present exactly once each):
+    - RATING=COMPLETE|MOSTLY_COMPLETE|GAPS_EXIST
+    - DEBUG_COVERAGE=<N>/<M>
+    - DISPLAY_IMPL_INVENTORY=<comma-separated Display impl signatures or NONE>
+    - ERROR_DISPLAY_GAPS=<comma-separated type names or NONE>
+    - CONFIG_DEFAULT_GAPS=<comma-separated type names or NONE>
+
+    RESPONSE TEMPLATE (copy and fill, plain text; no markdown headings):
+    RATING=COMPLETE|MOSTLY_COMPLETE|GAPS_EXIST
+    DEBUG_COVERAGE=<N>/<M>
+    DISPLAY_IMPL_INVENTORY=...
+    ERROR_DISPLAY_GAPS=...
+    CONFIG_DEFAULT_GAPS=...
+    DEBUG_NOTE_1=...
+    DISPLAY_NOTE_1=...
+
+    Rules:
+    - Every claim must be supported by citations from evidence.
+    - If evidence is aggregate/file-only, cite the CITE= token verbatim.
+    - Do not speculate beyond evidence.
+    - CITATIONS must be a single comma-separated line.
+    - Do NOT summarize — enumerate each item individually. A 2-sentence summary will FAIL validation.
+
+  preflight:
+  - name: raqt_all_impls
+    cmd:
+    - defs
+    - --kind
+    - object
+    - --format
+    - json
+    transform:
+      max_items: 120
+      max_chars: 6000
+  - name: raqt_all_structs
+    cmd:
+    - defs
+    - --kind
+    - struct
+    - --format
+    - json
+  - name: raqt_all_enums
+    cmd:
+    - defs
+    - --kind
+    - enum
+    - --format
+    - json
+  - name: derive_search
+    engine_override: rsqt
+    cmd:
+    - search
+    - '#[derive('
+    - --limit
+    - '80'
+    - --format
+    - json
+    transform:
+      max_items: 120
+      max_chars: 6000
+  - name: display_impls
+    engine_override: rsqt
+    cmd:
+    - search
+    - 'impl std::fmt::Display for '
+    - --limit
+    - '80'
+    - --format
+    - json
+    render: lines
+    transform:
+      exclude_test_files: true
+      exclude_comments: true
+      max_items: 40
+  - name: default_impls
+    engine_override: rsqt
+    cmd:
+    - search
+    - 'impl Default for '
+    - --limit
+    - '80'
+    - --format
+    - json
+    render: lines
+    transform:
+      exclude_test_files: true
+      exclude_comments: true
+      max_items: 40
+  - name: debug_impls
+    engine_override: rsqt
+    cmd:
+    - search
+    - 'impl std::fmt::Debug for '
+    - --limit
+    - '80'
+    - --format
+    - json
+    render: lines
+    transform:
+      exclude_test_files: true
+      exclude_comments: true
+      max_items: 40
+  expected_verdict: TRUE_POSITIVE
+validation:
+  required_verdicts:
+  - TRUE_POSITIVE
+  - FALSE_POSITIVE
+  - INDETERMINATE
+  citation_format: path:line(-line)
+  fail_on_missing_citations: true
+  enforce_citations_from_evidence: true
+  enforce_no_new_paths: true
+  enforce_paths_must_be_cited: true
+  minimum_questions: 3
+runner:
+  plugin: rsqt_guru
+  plugin_config:
+    rules_path: cfg_rust_audit_raqt_finding_rules.yaml
+    question_validators_path: cfg_rust_audit_raqt_question_validators.yaml

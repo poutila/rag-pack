@@ -1,0 +1,78 @@
+finding_rules:
+  BOUNDARY_MISSING_FROM_IMPL:
+    category: error_handling
+    severity: HIGH
+    recommendation_code: REC_FROM_IMPL
+    recommendation: Add From<Error> conversions at crate boundaries to prevent ad hoc map_err chains and inconsistent propagation.
+
+  BOUNDARY_INCOMPLETE_COVERAGE:
+    category: error_handling
+    severity: MEDIUM
+    recommendation_code: REC_BOUNDARY_REVIEW
+    recommendation: Review engine->cli and engine->gui boundary conversions and close all missing From<> paths.
+
+  PORTS_NO_TEST_FAKE:
+    category: architecture
+    severity: MEDIUM
+    recommendation_code: REC_TEST_FAKE
+    recommendation: Add deterministic fake/mock implementations for DI port traits to keep refactors testable.
+
+  PORTS_NO_ARC_BLANKET:
+    category: architecture
+    severity: LOW
+    recommendation_code: REC_ARC_BLANKET
+    recommendation: Add Arc<T> blanket impl where thread-safe shared ownership is required.
+
+  TRAIT_MISSING_DEBUG:
+    category: architecture
+    severity: MEDIUM
+    recommendation_code: REC_DERIVE_DEBUG
+    recommendation: Add Debug derives/impls to public operational types for diagnostics and observability.
+
+  TRAIT_MISSING_DISPLAY_ERROR:
+    category: error_handling
+    severity: HIGH
+    recommendation_code: REC_DISPLAY_ERROR
+    recommendation: Ensure each Error type provides Display (thiserror/manual impl) for robust propagation and operator diagnostics.
+
+  TRAIT_MISSING_DEFAULT_CONFIG:
+    category: architecture
+    severity: LOW
+    recommendation_code: REC_DEFAULT_CONFIG
+    recommendation: Add Default for config/settings types to reduce boilerplate and stabilize test setup.
+
+  META_BUILD_RS_PRESENT:
+    category: cargo
+    severity: MEDIUM
+    recommendation_code: REC_BUILD_RS
+    recommendation: Audit build.rs behavior and build dependencies; pin and review for deterministic reproducible builds.
+
+  SAFE_UNSAFE_PRESENT:
+    category: safety
+    severity: HIGH
+    recommendation_code: REC_UNSAFE
+    recommendation: Add explicit SAFETY invariants, targeted tests, and Miri coverage for unsafe code paths.
+
+  SAFE_FFI_PRESENT:
+    category: safety
+    severity: HIGH
+    recommendation_code: REC_FFI
+    recommendation: Define ABI contracts, ownership/lifetime boundaries, and integration tests for FFI interfaces.
+
+  SAFE_PROD_UNWRAP_PRESENT:
+    category: safety
+    severity: MEDIUM
+    recommendation_code: REC_PROD_UNWRAP
+    recommendation: Replace recoverable unwrap/expect in production paths with typed Result propagation.
+
+  SAFE_PANIC_PRESENT:
+    category: safety
+    severity: MEDIUM
+    recommendation_code: REC_PANIC
+    recommendation: Convert panic-prone production paths to explicit error contracts or document panic invariants and containment.
+
+  CARGO_PROC_MACRO:
+    category: cargo
+    severity: HIGH
+    recommendation_code: REC_PROC_MACRO
+    recommendation: Audit proc-macro dependencies and generation behavior as supply-chain and determinism risk hotspots.

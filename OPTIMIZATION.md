@@ -1,0 +1,650 @@
+# Question Set Optimization Changelog
+
+> Canonical architecture term in this repository: **FCDRAG (Fail-Closed Deterministic Corrective RAG)**.
+
+
+This file is the append-only changelog for question-set optimization work in `XREF_WORKFLOW_II_new/tools/rag_packs`.
+
+## How to use
+- Add one new entry per optimization batch.
+- Do not rewrite older entries; append corrections as new entries.
+- Record both config changes and observed impact.
+- Always include exact file paths and run commands.
+
+## Entry Template
+```md
+## [ENTRY_ID] YYYY-MM-DD UTC - <short title>
+- Scope:
+  - Pack(s): <path>
+  - Validator(s): <path>
+  - Finding rules: <path or N/A>
+- Goal: <what was being optimized>
+- Changes:
+  - <file>: <what changed>
+  - <file>: <what changed>
+- Why:
+  - <reason 1>
+  - <reason 2>
+- Validation:
+  - Command: `<exact command>`
+  - Output dir: `<path>`
+  - Result: <pass/fail + key notes>
+- Next:
+  - <follow-up action>
+```
+
+## [OPT-0001] 2026-02-11 UTC - RSQT Extension 3Q Stability + Evidence Precision
+- Scope:
+  - Pack(s): `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_rsqt_extension_3q.yaml`
+  - Validator(s): `XREF_WORKFLOW_II_new/tools/rag_packs/cfg_rust_audit_rsqt_extension_3q_question_validators.yaml`
+  - Finding rules: `N/A`
+- Goal: Improve answer contract reliability and reduce noisy evidence for deterministic + advice flows.
+- Changes:
+  - `pack_rust_audit_rsqt_extension_3q.yaml`:
+    - Version bumped `1.2.0 -> 1.3.0`.
+    - `defaults.max_tokens` reduced `2000 -> 1600`.
+    - Added `chat.advice_top_k: 6` to all questions.
+    - Added `exclude_test_files` and `exclude_comments` transforms to key preflights.
+    - Reduced high-volume preflights (`unwrap_sites` / `expect_sites`) from `limit=200` to `120`.
+    - Reduced `block_max_chars` for those heavy blocks from `8000` to `5000`.
+    - Fixed `R_DEPS_1` prompt-template ordering conflict so top lines are `VERDICT`, then `CITATIONS`, then `RATING`.
+    - Tightened `pub_fn_signatures` filter to signatures containing `String` or `Vec<`.
+  - `cfg_rust_audit_rsqt_extension_3q_question_validators.yaml`:
+    - Added explicit top-of-answer contract check for each QID:
+      - first line must be `VERDICT=...`
+      - second line must be `CITATIONS=...`
+- Why:
+  - Previous runs showed schema drift and citation provenance issues.
+  - Test/comment noise and oversized evidence blocks degraded quality and runtime efficiency.
+  - `R_DEPS_1` contained contradictory format instructions.
+- Validation:
+  - Command: `uv run python - <<'PY' ... yaml.safe_load(...) ... PY`
+  - Output dir: `N/A` (config-level validation only in this batch)
+  - Result: YAML parse check passed for updated files.
+- Next:
+  - Re-run the pack and compare against baseline runs in `XREF_WORKFLOW_II_new/xref_state/extension_3q_*`.
+  - Record score deltas and validator-issue deltas as a new entry.
+
+## [OPT-0002] 2026-02-11 UTC - First Logged Mission Run (RAQT / strand)
+- Scope:
+  - Pack(s): `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt_mission_v1_0.yaml`
+  - Validator(s): `pack-embedded validation + plugin validators`
+  - Finding rules: `plugin-managed (rsqt_guru)`
+- Goal: Establish first persistent, function-level logging baseline for mission pack execution.
+- Changes:
+  - Runtime/config usage only (no pack YAML edits in this batch).
+  - Produced first run with persisted log file in output folder:
+    - `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_10_strand_llm_retry/RUN_LOG.txt`
+- Why:
+  - Need post-run forensic traceability (question flow, prompts, retries, backend/model, function context).
+  - Need a benchmark artifact set for subsequent optimization diffs.
+- Validation:
+  - Command (resolved from log/manifest):
+    - `uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py --pack XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt_mission_v1_0.yaml --parquet RAQT.parquet --index /tmp/raqt_mission_pack.faiss --backend ollama --model strand-iq4xs:latest --out-dir XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_10_strand_llm_retry --quote-bypass-mode on`
+  - Output dir: `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_10_strand_llm_retry`
+  - Result:
+    - `RUN_MANIFEST`: `score_ok=8/8`, `ok_percentage=100.0`
+    - `GURU_METRICS`: `guru_score=8/8`, `issues=0`, `findings_count=28`
+    - `RUN_LOG`: present (`~98 KB`), includes `main.args.parsed`, per-question/preflight/chat events, retry events, and final `run.done`
+    - Runtime window from log: `2026-02-11 11:34:27.301` to `11:54:04.035` (~`19m36.734s`)
+- Next:
+  - Compare this run against later mission runs by diffing:
+    - `RUN_MANIFEST.json`
+    - `GURU_METRICS.json`
+    - schema-retry counts in `RUN_LOG.txt` (`event=question.chat.schema_retry`)
+
+## [OPT-0003] 2026-02-11 UTC - Mission Pack Runtime + Warning Reduction
+- Scope:
+  - Pack(s): `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt_mission_v1_0.yaml`
+  - Validator(s): `N/A` (pack-only tuning)
+  - Finding rules: `N/A`
+- Goal: Reduce runtime and eliminate avoidable warnings while preserving mission coverage.
+- Changes:
+  - `pack_rust_audit_raqt_mission_v1_0.yaml`:
+    - Version bumped `1.0.0 -> 1.0.1`.
+    - Fixed strict-json format conflict:
+      - `raqt_strict_json_stats` changed from `--format text` to `--format json`.
+    - Reduced ineffective schema retry loops:
+      - `R_TRAIT_1.chat.schema_retry_attempts`: `2 -> 1`
+      - `R_MISSION_REFACTOR_PLAN_1.chat.schema_retry_attempts`: `2 -> 1`
+    - Added RAQT command-level limits (faster than post-filter transforms):
+      - `R_PORTS_1`: limits on `raqt_traits`, `raqt_trait_impls`
+      - `R_TRAIT_1`: limits on `raqt_all_impls`, `raqt_all_structs`, `raqt_all_enums`
+      - `R_MISSION_CALLGRAPH_1`: limits on `mission_defs_functions`, `mission_refs_all`, `mission_callgraph_all`, `mission_callgraph_self`
+      - `R_MISSION_REFACTOR_PLAN_1`: limits on `plan_defs_struct_json`, `plan_defs_function_json`, `plan_callgraph_json`
+- Why:
+  - Logged run showed repeated schema-retry warnings with unchanged issue counts for two QIDs.
+  - Logged run showed one explicit avoidable warning from strict-json/text format mismatch.
+  - Largest runtime costs came from large unbounded RAQT preflight outputs.
+- Validation:
+  - Command: `uv run python - <<'PY' ... yaml.safe_load(...) ... PY`
+  - Output dir: `N/A` (config-level validation only in this batch)
+  - Result: YAML parse check passed.
+- Next:
+  - Re-run mission pack and compare against `RAQT_MISSION_10_strand_llm_retry`.
+  - Confirm:
+    - no strict-json format warning in `RUN_LOG.txt`
+    - fewer `event=question.chat.schema_retry`
+    - lower total runtime with stable score/guru metrics.
+
+## [OPT-0004] 2026-02-11 UTC - RSQT Extension 3Q: Stale Path Elimination + Score Alignment
+- Scope:
+  - Pack(s): `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_rsqt_extension_3q.yaml`
+  - Validator(s): `XREF_WORKFLOW_II_new/tools/rag_packs/cfg_rust_audit_rsqt_extension_3q_question_validators.yaml`
+  - Finding rules: `XREF_WORKFLOW_II_new/tools/rag_packs/cfg_rust_audit_rsqt_extension_3q_finding_rules.yaml`
+- Goal: Remove stale `audit_runs/*` evidence pollution and make runner/plugin scores converge.
+- Changes:
+  - `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`:
+    - Added transform path filters: `include_path_regex`, `exclude_path_regex`.
+    - Added default preflight path denylist support (`default_exclude_path_regex`) and wired it into transform execution.
+    - Persisted filtered preflight rows back to artifacts (`stdout`) so deterministic synthesizers/plugins consume the same normalized data used for prompt evidence.
+    - Added structured `preflight.step.filtered` logging (rows_before/rows_after) for post-run diagnostics.
+  - `XREF_WORKFLOW_II_new/tools/rag_packs/runner_policy.yaml`:
+    - Added `preflight.default_exclude_path_regex: ['(^|/)audit_runs(/|$)']`.
+    - Added path filter keys to `preflight.transform_filter_keys`.
+  - `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_rsqt_extension_3q.yaml`:
+    - Version bumped `1.3.0 -> 1.3.1`.
+    - Added explicit `include_path_regex` guards to all preflight transforms.
+    - Narrowed dependency preflights to Cargo manifests/lockfiles only.
+    - Broadened path regex matching from strict start (`^...`) to path-aware (`(^|/)...`) for robust relative/absolute path handling.
+  - `XREF_WORKFLOW_II_new/tools/rag_packs/plugins/rsqt_guru.py`:
+    - Hardened `R_ERR_RISK_1` deterministic normalizer to always emit at least one `PROD_RISK_N` line (`PROD_RISK_1=...`) when per-site expect evidence is absent.
+- Why:
+  - Previous run `RSQT_EXT3Q_OPT` had stale-path validator failures:
+    - Gate A/Gate B path violations and citation provenance mismatches from `audit_runs/*` path leakage.
+    - Runner score and plugin score diverged (`score_ok=1/4` while plugin reported `4/4`).
+  - Deterministic plugin synthesis previously read raw preflight artifacts; filtering only at evidence-injection time was insufficient.
+- Validation:
+  - Command:
+    - `uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py --pack XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_rsqt_extension_3q.yaml --parquet RSQT.parquet --index .rsqt_mission_addon.faiss --out-dir XREF_WORKFLOW_II_new/xref_state/RSQT_EXT3Q_OPT4 --quote-bypass-mode on --cache-preflights`
+  - Output dir: `XREF_WORKFLOW_II_new/xref_state/RSQT_EXT3Q_OPT4`
+  - Result:
+    - Runner: `score_ok=4/4`, `issues=0`, `fatal_contract_issues=0`.
+    - Plugin: `guru_score=4/4`, `guru_issues=0`.
+    - `RUN_LOG.txt` shows deterministic filtering events (`event=preflight.step.filtered`) for all steps.
+- Next:
+  - If `clone_hits/pub_fn_signatures` staying at zero is unexpected, retune `include_path_regex` to match the intended target subtree explicitly for this repository layout.
+  - Reuse the same path-filter model in other packs that scan large mono-repos with archived audit outputs.
+
+## [OPT-0005] 2026-02-11 UTC - RAQT Mission: Strict Path Gating + Mission Normalization Hardening
+- Scope:
+  - Pack(s): `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt_mission_v1_0.yaml`
+  - Validator(s): `XREF_WORKFLOW_II_new/tools/rag_packs/cfg_rust_audit_raqt_mission_question_validators.yaml`
+  - Finding rules: `XREF_WORKFLOW_II_new/tools/rag_packs/plugins/rsqt_guru.py` (deterministic normalizer behavior)
+- Goal: Port the RSQT stale-path controls to RAQT mission so mission answers and evidence stay repo-rooted and weak QIDs retry less.
+- Changes:
+  - `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt_mission_v1_0.yaml`:
+    - Version bumped `1.0.1 -> 1.0.2`.
+    - Added explicit `include_path_regex` filters to all path-bearing preflight transforms.
+    - Added missing transform blocks for previously unfiltered path-bearing preflights (`R_PORTS_1`, `R_TRAIT_1`, `R_MISSION_SAFETY_1`).
+    - Added `exclude_test_files`/`exclude_comments` where production-only evidence is expected.
+    - Converted `R_MISSION_RAG_1.rag_search_mission_text` from text to json + transform filtering.
+    - Tightened weak-QID output contracts (`R_TRAIT_1`, `R_MISSION_REFACTOR_PLAN_1`) with explicit plain-text/order rules and stricter template placeholders.
+  - `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`:
+    - Extended row extraction to include `sources` lists.
+    - Extended path extraction keys to include `doc_path` and `title`.
+    - Normalized `title=path::symbol` rows to file-path prefixes in `_get_path` so path filters apply to `rag-search`/`chat` source payloads.
+  - `XREF_WORKFLOW_II_new/tools/rag_packs/runner_policy.yaml`:
+    - Synced `iter_rows_keys` and `path_keys` with the runner updates (`sources`, `doc_path`, `title`).
+  - `XREF_WORKFLOW_II_new/tools/rag_packs/plugins/rsqt_guru.py`:
+    - Added mission-QID audit-run path scrubbing in validator normalization path.
+    - Canonicalized audit-run paths in row-token generation and `_get_path_any` fallback title parsing.
+    - Kept deterministic citations anchored to mission artifact tokens for RAQT mission deterministic normalizers.
+- Why:
+  - RAQT mission runs still surfaced stale `audit_runs/...` provenance in retrieved `title`/`sources` payloads.
+  - Existing transform path filters did not apply to `sources`-backed outputs or `title` path carriers.
+  - Weak QIDs (`R_TRAIT_1`, `R_MISSION_REFACTOR_PLAN_1`) were consistently triggering one schema retry each.
+- Validation:
+  - Command:
+    - `uv run python -m py_compile XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py XREF_WORKFLOW_II_new/tools/rag_packs/plugins/rsqt_guru.py`
+    - `uv run python - <<'PY' ... yaml.safe_load(...) ... PY`
+  - Output dir: `N/A` (static config/code validation only in this batch)
+  - Result: Python compile + YAML parse passed.
+- Next:
+  - Re-run RAQT mission pack and confirm:
+    - fewer/no `question.chat.schema_retry` events for `R_TRAIT_1` and `R_MISSION_REFACTOR_PLAN_1`,
+    - reduced stale `audit_runs/...` path presence in mission evidence and final answers,
+    - stable `score_ok` and `guru_score`.
+
+## [OPT-0006] 2026-02-11 UTC - RAQT Mission Hotfix: Restore Evidence Volume Under Path Gating
+- Scope:
+  - Pack(s): `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt_mission_v1_0.yaml`
+  - Validator(s): `N/A`
+  - Finding rules: `N/A`
+- Goal: Fix over-filtering introduced by default `audit_runs` exclusion so RAQT mission questions retain enough evidence for guru scoring.
+- Changes:
+  - `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt_mission_v1_0.yaml`:
+    - Added `exclude_path_regex: []` to all transform blocks that also define `include_path_regex`.
+    - This explicitly disables runner default `preflight.default_exclude_path_regex` (`(^|/)audit_runs(/|$)`) for RAQT mission preflights while keeping explicit include filters.
+- Why:
+  - Run `RAQT_MISSION_12_strand_opt` showed severe evidence starvation (`rows_after=0`) across multiple RAQT/RSQT mission steps.
+  - Runner score stayed `8/8`, but guru score regressed (`6/8`) due missing semantic evidence for `R_PORTS_1` and `R_MISSION_SAFETY_1`.
+- Validation:
+  - Command:
+    - `uv run python - <<'PY' ... yaml.safe_load(...) ... PY`
+    - `uv run python - <<'PY' ... run_pack._parse_pack(...) ... PY`
+  - Output dir: `N/A` (pack-level hotfix validation only in this batch)
+  - Result: YAML parse and runner pack parse passed.
+- Next:
+  - Re-run RAQT mission and verify:
+    - `preflight.step.filtered` no longer collapses key steps to zero rows,
+    - guru score returns to `>= 8/8` target trajectory,
+    - no regression in schema retry behavior.
+
+## [OPT-0007] 2026-02-11 UTC - Runner Fix: Explicit Empty Exclude Override
+- Scope:
+  - Pack(s): `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt_mission_v1_0.yaml` (consumer)
+  - Validator(s): `N/A`
+  - Finding rules: `N/A`
+- Goal: Make `exclude_path_regex: []` actually disable default path excludes in preflight transforms.
+- Changes:
+  - `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`:
+    - In `_apply_transform_filters`, changed exclude-path selection logic to:
+      - use `transform["exclude_path_regex"]` whenever key is present (even empty list),
+      - fall back to `_default_exclude_path_regex` only when the key is absent.
+- Why:
+  - `RAQT_MISSION_13_strand_opt` still showed mass evidence collapse despite pack-level `exclude_path_regex: []`.
+  - Root cause: previous code treated empty list as falsey and reapplied default excludes.
+- Validation:
+  - Command:
+    - `uv run python -m py_compile XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`
+    - targeted behavioral probe via `run_pack._apply_transform_filters(...)`:
+      - no explicit exclude key -> row dropped by default exclude
+      - explicit `exclude_path_regex: []` -> row preserved
+  - Output dir: `N/A`
+  - Result: compile passed, behavior verified.
+- Next:
+  - Re-run RAQT mission pack and confirm restored evidence row counts and recovered guru score.
+
+## [OPT-0008] 2026-02-11 UTC - Logging Enrichment for Preflight Filter Diagnostics
+- Scope:
+  - Runner: `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`
+  - Policy defaults: `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py` (`DEFAULT_RUNNER_POLICY`)
+- Goal: Make `RUN_LOG.txt` self-sufficient for debugging why preflight rows were filtered out.
+- Changes:
+  - Added `runner.logging.path_sample_items` default (5) and wired it to logging constants.
+  - Added transform-diagnostics helpers:
+    - `_summarize_transform_filters(...)`
+    - `_unique_paths(...)`
+  - Upgraded `preflight.step.filtered` event with:
+    - include/exclude pattern counts and samples,
+    - exclude source (`explicit` vs `default`),
+    - test filter source (`explicit`/`default`/`fallback`),
+    - require/group/filter_fn flags,
+    - unique path counts and before/after/dropped path samples.
+  - Added new warning event `preflight.step.filtered_to_zero` when a filter collapses non-empty rows to zero.
+- Why:
+  - Prior logs had only `rows_before/rows_after`, which was insufficient to diagnose over-filtering or default-vs-explicit filter selection.
+- Validation:
+  - Command:
+    - `uv run python -m py_compile XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`
+  - Output dir: `N/A` (code-level validation only in this batch)
+  - Result: compile passed.
+- Next:
+  - Re-run mission packs and inspect `RUN_LOG.txt` for `preflight.step.filtered_to_zero` warnings to quickly identify the exact offending filter config.
+
+## [OPT-0009] 2026-02-11 UTC - RAQT Mission Schema Hardening for Callgraph/RAG QIDs
+- Scope:
+  - Pack(s): `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt_mission_v1_0.yaml`
+  - Validator(s): `N/A` (existing global contract reused)
+  - Finding rules: `N/A`
+- Goal: Reduce citation-fabrication failures and recover stable `8/8` by hardening the two weakest LLM-only QIDs.
+- Trigger evidence:
+  - `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_15_strand_opt/RUN_MANIFEST.json`: `score_ok=6/8`
+  - `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_15_strand_opt/RUN_LOG.txt`:
+    - `qid=R_MISSION_CALLGRAPH_1` unknown citation tokens (`repo/...`)
+    - `qid=R_MISSION_RAG_1` invalid placeholder citations (`repo/path.rs:line`)
+- Changes:
+  - `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt_mission_v1_0.yaml`:
+    - `R_MISSION_CALLGRAPH_1`: added `chat.retry_on_schema_fail=true`, `schema_retry_attempts=2`, strict template including `VERDICT`, `CITATIONS`, and required keys.
+    - `R_MISSION_RAG_1`: added `chat.retry_on_schema_fail=true`, `schema_retry_attempts=2`, strict template including `VERDICT`, `CITATIONS`, and required keys.
+    - Added explicit plain-text + key-order output rules in both question prompts.
+- Why:
+  - In run 15, both failing QIDs had no strict template and no schema retries, while strict QIDs already converged via retry/repair flow.
+- Validation:
+  - Command:
+    - `uv run python - <<'PY' ... yaml.safe_load(...) ... PY`
+  - Result: YAML parse passed.
+- Next:
+  - Re-run mission pack with explicit model pin:
+    - `--model strand-iq4xs:latest`
+  - Confirm in `RUN_LOG.txt`:
+    - `qid=R_MISSION_CALLGRAPH_1` and `qid=R_MISSION_RAG_1` show `strict_response_template=True`
+    - `question.validator.issues` cleared or recovered via schema retries.
+
+## [OPT-0010] 2026-02-11 UTC - Advice Mode Hardening (Corrective Guru Tone)
+- Scope:
+  - Runner policy: `XREF_WORKFLOW_II_new/tools/rag_packs/runner_policy.yaml`
+  - Runner fallback defaults: `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`
+- Goal: Prevent low-value praise-only advice and force concrete corrective recommendations.
+- Changes:
+  - Updated `prompts.advice_prompt.text` to require:
+    - corrective tone ("not praise"),
+    - at least two issues when evidence supports it,
+    - imperative issue statements,
+    - concrete Rust patch targets,
+    - test plans that include failing + passing conditions.
+- Why:
+  - Recent runs produced polite/generic advice in places where mission-grade corrective guidance was required.
+- Validation:
+  - `uv run python -m py_compile XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py` passed.
+- Next:
+  - Re-run mission pack and inspect `*_advice_chat.json` plus `REPORT.md` advice sections for stronger, implementation-level guidance.
+
+## [OPT-0011] 2026-02-11 UTC - Mission Advice Gate: Hard Fail-Closed Enforcement
+- Scope:
+  - Runner: `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`
+  - Policy: `XREF_WORKFLOW_II_new/tools/rag_packs/runner_policy.yaml`
+  - Docs: `docs/README.md`, `docs/RUNNER_GUIDE.md`, `RUN_PACK_USER_MANUAL_v1_0.md`, `RUN_PACK_CLI_CHEATSHEET.md`
+- Goal: Make mission runs fail unless Guru advice is concrete, evidence-backed, and structurally complete.
+- Changes:
+  - Added policy-controlled mission advice quality gate under:
+    - `runner.advice_quality_gate`
+  - Added mission-pack detection (`pack_type` regex, default `(?i)mission`).
+  - Enforced pre-run hard check for mission packs:
+    - all questions must set `advice_mode=llm`.
+  - Added per-question advice validator for mission packs:
+    - minimum concrete issues when evidence exists (default: 2),
+    - required issue fields (`ISSUE/WHY_IT_MATTERS/PATCH_SKETCH/TEST_PLAN/CITATIONS`),
+    - citation format and evidence provenance checks on `CITATIONS_n`,
+    - generic/praise-only rejection.
+  - Wired failures into run-fatal path and logs:
+    - `event=question.advice.validator.issues`
+    - `event=run.done ... fatal_advice_gate_issues=<n>`
+- Why:
+  - Mission objective requires actionable corrective engineering guidance; praise-only output is operationally useless.
+- Validation:
+  - `uv run python -m py_compile XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py` passed.
+  - Synthetic validator probe:
+    - concrete advice sample -> no issues
+    - praise/generic sample -> issues raised (`generic/praise`, bad citations, insufficient concrete issues)
+- Next:
+  - Run the current mission pack and confirm:
+    - no `question.advice.validator.issues` events for passing QIDs,
+    - `fatal_advice_gate_issues=0` on successful mission run.
+
+## [OPT-0012] 2026-02-11 UTC - Strict Evidence-Presence Gate (Fail Fast on Empty Evidence)
+- Scope:
+  - Runner: `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`
+  - Policy: `XREF_WORKFLOW_II_new/tools/rag_packs/runner_policy.yaml`
+  - Docs/ops: `docs/RUNNER_GUIDE.md`, `RUN_PACK_USER_MANUAL_v1_0.md`, `RUN_PACK_CLI_CHEATSHEET.md`, `AGENTS.md`
+- Goal: Eliminate low-value model/advice attempts when a question has no extracted deterministic evidence.
+- Changes:
+  - Added policy block:
+    - `runner.evidence_presence_gate.fail_on_empty_evidence: true`
+    - `runner.evidence_presence_gate.fail_fast: true`
+  - Added strict gate in `_run_single` before answer generation:
+    - if `evidence_blocks` is empty, log `question.evidence.empty.fail_fast`,
+    - write partial `REPORT.md`,
+    - abort run with exit code `2`.
+  - Updated CLI flag help text to clarify that `--no-evidence-empty-gate` does not bypass strict policy mode.
+- Why:
+  - Asking for improvements without evidence wastes runtime and reduces mission audit quality.
+  - Mission objective requires evidence-backed corrective guidance only.
+- Validation:
+  - `uv run python -m py_compile XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py` passed.
+  - Synthetic advice-gate probe still passes/flags correctly after this change.
+- Next:
+  - Re-run a mission pack and confirm:
+    - empty-evidence QIDs abort immediately with clear log/report markers,
+    - no late-stage "NOT FOUND" drift from evidence-empty branches.
+
+## [OPT-0013] 2026-02-11 UTC - Mission/Docs Contract Hardening + Advice Retry Loop
+- Scope:
+  - Pack(s):
+    - `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt_mission_v1_0.yaml`
+    - `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_rsqt_docs_focus_4q_v1_0.yaml`
+  - Runner/policy:
+    - `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`
+    - `XREF_WORKFLOW_II_new/tools/rag_packs/runner_policy.yaml`
+  - Validator(s): existing pack/plugin validators (no validator file edits in this batch)
+  - Finding rules: `N/A`
+- Goal: Patch the highest-impact failures seen in recent runs:
+  - invalid/fabricated citations on weak LLM QIDs,
+  - stale `audit_runs/*` path leakage in mission evidence,
+  - mission advice contract failures with no corrective retry path.
+- Changes:
+  - `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt_mission_v1_0.yaml`:
+    - Added strict template + schema retry to weak QIDs:
+      - `R_PORTS_1` (`retry_on_schema_fail: true`, `schema_retry_attempts: 2`, strict template).
+      - `R_MISSION_RUNTIME_1` (`retry_on_schema_fail: true`, `schema_retry_attempts: 2`, strict template).
+    - Replaced explicit `exclude_path_regex: []` with:
+      - `exclude_path_regex: ['(^|/)audit_runs(/|$)']`
+      - Applied to all preflight transform blocks in this mission pack to prevent stale audit artifact contamination.
+  - `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_rsqt_docs_focus_4q_v1_0.yaml`:
+    - Added strict template + schema retry to first three weak docs QIDs:
+      - `R_DOC_COVERAGE_1`
+      - `R_DOC_UNDOC_1`
+      - `R_DOC_MATCH_1`
+    - Kept `R_DOC_GENERATE_1` hardening in place.
+  - `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`:
+    - Added policy-driven mission advice retry controls:
+      - `retry_on_validation_fail`
+      - `retry_attempts`
+      - `retry_issue_bullets`
+    - Added `_build_advice_retry_prompt(...)`.
+    - Added advice retry loop when advice quality validation fails (mission gate path):
+      - retries with explicit validation issues,
+      - rewrites `*_advice_chat.json` with latest attempt,
+      - logs `question.advice.retry`, `question.advice.retry.done`, `question.advice.retry.satisfied`.
+    - Added per-question `advice_retries` metric to completion stats/logging.
+  - `XREF_WORKFLOW_II_new/tools/rag_packs/runner_policy.yaml`:
+    - Added defaults under `runner.advice_quality_gate`:
+      - `retry_on_validation_fail: true`
+      - `retry_attempts: 1`
+      - `retry_issue_bullets: 8`
+- Why:
+  - `RAQT_MISSION_16_strand_opt` showed repeated advice format failures and invalid placeholder citations on weak QIDs.
+  - `RSQT_DOCS_4Q` showed contract failures concentrated in first three docs QIDs (fabricated citations/path-gate issues).
+  - Mission advice quality gate previously validated but did not attempt corrective retry.
+- Validation:
+  - Command: `uv run python - <<'PY' ... yaml.safe_load(...) ... PY`
+    - Files parsed:
+      - `pack_rust_audit_raqt_mission_v1_0.yaml`
+      - `pack_rust_audit_rsqt_docs_focus_4q_v1_0.yaml`
+      - `runner_policy.yaml`
+  - Command: `uv run python -m py_compile XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`
+  - Command: `uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py --help`
+  - Output dir: `N/A` (no execution run launched in this patch batch)
+  - Result: YAML parse + Python compile + CLI startup checks passed.
+- Next:
+  - Re-run mission pack and docs 4Q pack, then verify in `RUN_LOG.txt`:
+    - reduced citation-contract issues on previously weak QIDs,
+    - `audit_runs/*` path leakage removed from filtered preflight evidence,
+    - advice retry events present only when needed and final `question.advice.validator.issues` reduced.
+
+## [OPT-0014] 2026-02-11 UTC - Evidence Delivery Audit (Prompt Input vs Parquet Cross-Check)
+- Scope:
+  - Runner: `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`
+  - Policy: `XREF_WORKFLOW_II_new/tools/rag_packs/runner_policy.yaml`
+- Goal: Prove deterministically that evidence selected by preflights is actually delivered to LLM calls and matches paths present in parquet corpora.
+- Changes:
+  - `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`:
+    - Added evidence-delivery audit subsystem:
+      - path canonicalization + runner-artifact path scrubbing,
+      - parquet path-universe discovery from runtime schema keys (`pyarrow` primary, `polars` fallback),
+      - per-question audit artifact writer.
+    - Added per-question artifact:
+      - `<QID>_evidence_delivery_audit.json`
+      - includes evidence path/citation counts, parquet path match/miss counts, and LLM dispatch records.
+    - Added per-run summary artifact:
+      - `EVIDENCE_DELIVERY_SUMMARY.json`
+      - includes aggregate `total_missing_paths_from_parquet` and per-question audit index.
+    - Added LLM dispatch logging/events for every send path:
+      - primary chat, adaptive rerun, schema retry, advice primary, advice retry.
+      - captures backend/model/top_k/prompt mode plus `prompt_sha256`, `prompt_chars`, and `prompt_cite_markers`.
+    - Added CLI controls:
+      - `--evidence-audit` / `--no-evidence-audit`
+      - `--log-path-sample-items`
+    - Added startup print for effective evidence-audit mode.
+  - `XREF_WORKFLOW_II_new/tools/rag_packs/runner_policy.yaml`:
+    - Added `runner.logging` block with explicit defaults and new `evidence_delivery_audit` config:
+      - `enabled`, `filename_suffix`, `summary_filename`,
+      - `sample_items`, `parquet_scan_batch_size`, `parquet_path_universe_cap`.
+- Why:
+  - We needed machine-verifiable proof of evidence delivery; LLM self-reporting of evidence use is not reliable enough.
+  - We needed a direct way to detect path drift/mismatch between injected evidence and `.parquet` content.
+  - We needed post-run forensic artifacts to validate evidence flow years later without rerunning debug sessions.
+- Validation:
+  - Command:
+    - `uv run python -m py_compile XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`
+  - Command:
+    - `uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py --help`
+    - confirmed flags: `--evidence-audit`, `--no-evidence-audit`, `--log-path-sample-items`
+  - Command (helper smoke probe):
+    - `uv run python - <<'PY' ... import run_pack ... _discover_parquet_path_universe(...) ... _build_question_evidence_audit(...) ... _append_llm_dispatch_to_audit(...) ... PY`
+    - observed: `paths 1869 source pyarrow.parquet.iter_batches`, `dispatches 1`
+  - Output dir: `N/A` (runner/policy instrumentation batch; no full pack launched in this patch)
+  - Result: compile + helper probe passed.
+- Next:
+  - On next pack run, inspect:
+    - `RUN_LOG.txt` events:
+      - `question.evidence.audit`
+      - `question.chat.dispatch`
+      - `evidence.audit.summary`
+    - `EVIDENCE_DELIVERY_SUMMARY.json.total_missing_paths_from_parquet` (target `0`, investigate non-zero paths immediately).
+
+## [OPT-0015] 2026-02-12 UTC - Runner Contract Hardening (Fail-Closed + Provenance Repair)
+- Scope:
+  - Runner: `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`
+  - Policy defaults in runner: `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py` (`DEFAULT_RUNNER_POLICY` / prompt fallbacks)
+- Goal: Remove remaining contract escape hatches and reduce repeatable path/citation failures without relying on model behavior.
+- Changes:
+  - `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`:
+    - Strict evidence-empty semantics:
+      - `evidence_is_empty` changed to `usable_evidence_blocks == 0` (independent of quote-bypass mode).
+    - Deterministic Gate-B repair path added:
+      - `_extract_evidence_citation_tokens_by_path(...)`
+      - `_auto_complete_citations_for_path_gates(...)`
+      - new log event `question.path_gate.autocomplete`.
+    - Reordered reporting flow so deterministic citation repair runs before writing `**Answer:**` to `REPORT.md`.
+    - Advice prompt selection kept grounding-first (`prompt_grounding or prompt_analyze`).
+    - `require_regex` filtering now matches against `path + line_text` instead of line text only.
+    - `_should_skip_low_confidence_missing_path(...)` hardened to ignore non-corpus paths (`.parquet`, `.faiss`, absolute paths outside repo root, `/.cargo/`, `/.rustup/`).
+    - `_canonicalize_repo_path(...)` improved to normalize redundant repo-root prefixes (e.g., `rust/...`) when safe.
+    - Evidence-audit missing paths are fail-closed (`evidence.audit.missing_paths.fatal`) and recorded as fatal contract issues.
+    - Run exit condition remains strictly fail-closed:
+      - `if fatal_contract_issues or fatal_advice_gate_issues: raise SystemExit(2)`.
+  - `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py` prompt templates:
+    - Advice prompt placeholders changed from `repo/path.rs:line(-line)` to explicit "copy tokens from evidence" language.
+    - Added explicit rule: `CITATIONS_n` must be copied verbatim from evidence tokens (`CITE=` lines).
+- Why:
+  - Recent mission/general runs showed repeated Gate-B uncited-path failures and advice citation-format/provenance failures.
+  - Prior evidence-empty logic still allowed a mode-dependent path around strict empty-evidence gating.
+  - Report text could diverge from post-repair validated answer.
+- Validation:
+  - Command:
+    - `uv run python -m py_compile XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`
+  - Result: compile passed after all patch batches in this entry.
+- Next:
+  - Re-run RAQT mission sets and verify:
+    - reduced `event=question.validator.issues` for Gate-B path-citation mismatches,
+    - reduced advice validator failures caused by placeholder/fabricated citations,
+    - no LLM dispatch when `evidence_usable_blocks==0` under strict evidence gate.
+
+## [OPT-0016] 2026-02-12 UTC - RSQT General Set8/Set9 Evidence Budget Alignment
+- Scope:
+  - Pack(s):
+    - `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_rsqt_general_set8_v1_0.yaml`
+    - `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_rsqt_general_set9_v1_0.yaml`
+  - Validator(s): pack-embedded validation (`enforce_citations_from_evidence`, `enforce_no_new_paths`, `enforce_paths_must_be_cited`)
+  - Finding rules: plugin-managed (`rsqt_guru`)
+- Goal: Ensure deterministic answers only cite paths/tokens that are guaranteed to be present in delivered evidence blocks (avoid prompt truncation-driven provenance failures).
+- Changes:
+  - `pack_rust_audit_rsqt_general_set8_v1_0.yaml`:
+    - `R_SAFE_6.preflight.unsafe_breakdown` now has transform budget controls:
+      - `render: lines`
+      - `max_items: 40`
+      - `max_chars: 24000`
+  - `pack_rust_audit_rsqt_general_set9_v1_0.yaml`:
+    - `R_TEST_2.preflight.tests_dir_hits` transform added:
+      - `render: lines`
+      - `max_items: 40`
+      - `max_chars: 24000`
+    - `R_TEST_2.preflight.mod_tests_hits` transform added:
+      - `render: lines`
+      - `max_items: 40`
+      - `max_chars: 24000`
+- Why:
+  - Latest baseline run `RSQT_GENERAL_5SETS_6_TO_10_260212_042604` still failed in:
+    - `R_SAFE_6` (set8)
+    - `R_TEST_2` (set9)
+  - Failure mode was deterministic-answer citations exceeding delivered prompt evidence windows.
+- Validation:
+  - Command:
+    - `uv run python - <<'PY' ... yaml.safe_load(...) ... PY`
+  - Result: both updated pack YAMLs parse successfully.
+- Next:
+  - Re-run `set8` and `set9` and confirm:
+    - no `question.validator.issues` for those QIDs,
+    - `fatal_contract_issues=0`,
+    - stable score recovery toward `4/4` for each set.
+
+## [OPT-0017] 2026-02-12 UTC - RAQT Mission 10-Set Baseline (Post-Hardening Diagnostics)
+- Scope:
+  - Output baselines:
+    - `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_5SETS_260212_045312`
+    - `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_5SETS_6_TO_10_260212_045318`
+  - Runtime: `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`
+- Goal: Capture current RAQT mission failure profile after fail-closed runner hardening to target next optimization pass.
+- Changes:
+  - No code/config edits in this entry (analysis-only checkpoint).
+  - Captured run-level diagnostics and dominant failure classes from logs/manifests.
+- Why:
+  - Needed a clean post-hardening baseline before additional mission-pack changes.
+- Validation:
+  - Commands used for analysis:
+    - `find ... -name RUN_MANIFEST.json`
+    - `rg -n "event=run.done|event=question.validator.issues|event=question.advice.validator.issues|fatal_*|evidence_audit_missing_paths" .../RUN_LOG.txt`
+    - `uv run python - <<'PY' ... aggregate manifest outputs ... PY`
+  - Output dirs:
+    - `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_5SETS_260212_045312`
+    - `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_5SETS_6_TO_10_260212_045318`
+  - Result:
+    - Aggregate remained `score_ok=0` across both 5-set bundles.
+    - `evidence_audit_missing_paths=0` in all packs (evidence/parquet matching stable).
+    - Dominant failures are advice-gate and citation-contract, not evidence starvation:
+      - repeated `Advice output must include numbered ISSUE_n fields`,
+      - `Advice must provide at least 2 concrete issues`,
+      - invalid/non-evidence citations in advice and some answer path-gate mismatches.
+- Next:
+  - Re-run RAQT mission after OPT-0015 and compare deltas:
+    - count of `question.path_gate.autocomplete` events,
+    - reduction in `question.validator.issues` for Gate-B path-citation mismatches,
+    - reduction in mission advice gate failures (`fatal_advice_gate_issues`).
+
+## [OPT-0018] 2026-02-12 UTC - P0 Contract Stabilization Queue (RSQT/RAQT)
+- Scope:
+  - Runner:
+    - `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`
+  - Packs:
+    - `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_rsqt_general_v1_6_explicit.yaml`
+    - `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt_mission_v1_0.yaml`
+  - Recent outputs analyzed:
+    - `XREF_WORKFLOW_II_new/xref_state/RSQT_GENERAL_5SETS_260212_042553`
+    - `XREF_WORKFLOW_II_new/xref_state/RSQT_GENERAL_5SETS_6_TO_10_260212_042604`
+    - `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_5SETS_260212_045312`
+    - `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_5SETS_6_TO_10_260212_045318`
+- Goal:
+  - Lock optimization loop on contract correctness first, then model-quality iteration.
+  - Prevent “format-compliant but non-provenance” passes.
+- Changes:
+  - No new code edits in this entry (tracking + execution priority update).
+  - Confirmed current priority order for next patch cycles:
+    - P0-1: keep strict evidence semantics fail-closed (`usable_evidence_blocks==0` -> abort).
+    - P0-2: keep report/answer parity (deterministic citation repair before `REPORT.md` answer write).
+    - P0-3: keep advice citation template evidence-token-only (no placeholder citations).
+    - P0-4: make invalid `require_regex` fail with explicit configuration error.
+    - P0-5: tighten preflight cache signature to match materialized argv.
+- Why:
+  - Current logs indicate remaining failures are primarily contract and advice-gate enforcement, not evidence starvation.
+  - Mission target requires deterministic, evidence-backed corrective guidance under fail-closed behavior.
+- Validation:
+  - Documentation/state update only in this entry.
+  - Runner/pack behavioral checks remain tracked in run outputs listed above.
+- Next:
+  - Implement P0-4 and P0-5 in `run_pack.py`.
+  - Re-run one RSQT general pack and one RAQT mission pack and confirm:
+    - `fatal_contract_issues=0`,
+    - `fatal_advice_gate_issues` reduced materially,
+    - zero provenance violations on passing QIDs.

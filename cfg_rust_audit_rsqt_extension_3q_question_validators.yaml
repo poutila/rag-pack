@@ -1,0 +1,159 @@
+defaults:
+  test_path_patterns:
+  - (^|/)(tests)(/|$)
+  - (^|/)(testdata|fixtures)(/|$)
+  - (^|/)[^/]*_tests?\.rs$
+  - (^|/)test_[^/]+\.rs$
+
+validators:
+  R_ERR_INV_1:
+  - type: require_non_test_fileline_citations_if_regex
+    trigger_regex: (?i)(expect\(|unwrap\()|(From<)|(impl\s+From)|(thiserror)|(anyhow)
+    message_no_citations: 'R_ERR_INV_1: claims error inventory/propagation but provides no file:line citations'
+    message_all_test: 'R_ERR_INV_1: citations are all in test paths; cite production code paths'
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_ERR_INV_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_ERR_INV_1: Missing CITATIONS line with at least one path:line token'
+  - type: require_min_inline_regex_count
+    regex: '(?is)\A\s*VERDICT\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)\s*\n\s*CITATIONS\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_ERR_INV_1: response must start with VERDICT line then CITATIONS line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*FRAMEWORK\s*=\s*(thiserror|anyhow|manual|mixed)\s*$'
+    min_count: 1
+    message: 'R_ERR_INV_1: missing FRAMEWORK=thiserror|anyhow|manual|mixed line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*CUSTOM_ERROR_\d+\s*='
+    min_count: 1
+    message: 'R_ERR_INV_1: must enumerate at least one CUSTOM_ERROR_N line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*FROM_IMPL_\d+\s*='
+    min_count: 1
+    message: 'R_ERR_INV_1: must enumerate FROM_IMPL_N lines (or FROM_IMPL_1=NONE)'
+  - type: ban_regex
+    regex: '(?im)^\s*\*{0,2}(analysis|citations)\*{0,2}\s*:'
+    message: 'R_ERR_INV_1: markdown headers are banned; use plain text output-contract lines'
+  - type: ban_regex
+    regex: '(?m)^\s*#{1,6}\s+'
+    message: 'R_ERR_INV_1: markdown heading lines are banned'
+
+  R_ERR_RISK_1:
+  - type: require_non_test_fileline_citations_if_regex
+    trigger_regex: (?i)(prod_unwraps|prod_expects|unwrap\(|expect\()|(map_err\()|(INVARIANT|RECOVERABLE)|(From<Error)|(impl\s+From<)
+    message_no_citations: 'R_ERR_RISK_1: makes risk/propagation claims but provides no file:line citations'
+    message_all_test: 'R_ERR_RISK_1: citations are all in test paths; cite production code paths'
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_ERR_RISK_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_ERR_RISK_1: Missing CITATIONS line with at least one path:line token'
+  - type: require_min_inline_regex_count
+    regex: '(?is)\A\s*VERDICT\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)\s*\n\s*CITATIONS\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_ERR_RISK_1: response must start with VERDICT line then CITATIONS line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*BOUNDARY_ENGINE_TO_CLI_FROM\s*=\s*(YES|NO)\s*$'
+    min_count: 1
+    message: 'R_ERR_RISK_1: missing BOUNDARY_ENGINE_TO_CLI_FROM=YES|NO line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*BOUNDARY_ENGINE_TO_GUI_FROM\s*=\s*(YES|NO)\s*$'
+    min_count: 1
+    message: 'R_ERR_RISK_1: missing BOUNDARY_ENGINE_TO_GUI_FROM=YES|NO line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*PROD_RISK_\d+\s*='
+    min_count: 1
+    message: 'R_ERR_RISK_1: must include at least one PROD_RISK_N line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*(IMPROVEMENT_\d+\s*=|IMPROVEMENT_1=NO EVIDENCE-GROUNDED IMPROVEMENTS)'
+    min_count: 1
+    message: 'R_ERR_RISK_1: must include improvement lines grounded in evidence'
+  - type: ban_regex
+    regex: '(?im)^\s*\*{0,2}(analysis|citations)\*{0,2}\s*:'
+    message: 'R_ERR_RISK_1: markdown headers are banned; use plain text output-contract lines'
+  - type: ban_regex
+    regex: '(?m)^\s*#{1,6}\s+'
+    message: 'R_ERR_RISK_1: markdown heading lines are banned'
+
+  R_DEPS_1:
+  - type: require_non_test_fileline_citations_if_regex
+    trigger_regex: (?i)(Cargo\.toml)|(dependencies)|(git\s*=\s*")|(path\s*=\s*")|(Cargo\.lock)
+    message_no_citations: 'R_DEPS_1: dependency/supply-chain claims require file:line citations'
+    message_all_test: 'R_DEPS_1: citations are all in test paths; cite Cargo manifests or production paths'
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_DEPS_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_DEPS_1: Missing CITATIONS line with at least one path:line token'
+  - type: require_min_inline_regex_count
+    regex: '(?is)\A\s*VERDICT\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)\s*\n\s*CITATIONS\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_DEPS_1: response must start with VERDICT line then CITATIONS line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*RATING\s*=\s*(GOOD|ACCEPTABLE|NEEDS_IMPROVEMENT)\s*$'
+    min_count: 1
+    message: 'R_DEPS_1: missing RATING=GOOD|ACCEPTABLE|NEEDS_IMPROVEMENT line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*DEP_FILE_\d+\s*='
+    min_count: 1
+    message: 'R_DEPS_1: must include DEP_FILE_N inventory lines'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*LOCKFILE_PRESENT\s*=\s*(YES|NO)\s*@\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_DEPS_1: missing LOCKFILE_PRESENT=YES|NO @ path:line line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*MSRV_STATUS\s*=\s*(DECLARED|NOT_DECLARED)\s*$'
+    min_count: 1
+    message: 'R_DEPS_1: missing MSRV_STATUS=DECLARED|NOT_DECLARED line'
+  - type: ban_regex
+    regex: '(?im)^\s*\*{0,2}(analysis|citations)\*{0,2}\s*:'
+    message: 'R_DEPS_1: markdown headers are banned; use plain text output-contract lines'
+  - type: ban_regex
+    regex: '(?m)^\s*#{1,6}\s+'
+    message: 'R_DEPS_1: markdown heading lines are banned'
+
+  R_OWN_1:
+  - type: require_non_test_fileline_citations_if_regex
+    trigger_regex: (?i)(\.clone\(\))|(Arc<Mutex)|(Arc<RwLock)|(Rc<)|(Box<dyn)|(pub fn.*String)|(pub fn.*Vec)
+    message_no_citations: 'R_OWN_1: ownership/borrowing claims require file:line citations'
+    message_all_test: 'R_OWN_1: citations are all in test paths; cite production code paths'
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_OWN_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_OWN_1: Missing CITATIONS line with at least one path:line token'
+  - type: require_min_inline_regex_count
+    regex: '(?is)\A\s*VERDICT\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)\s*\n\s*CITATIONS\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_OWN_1: response must start with VERDICT line then CITATIONS line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*CLONE_TOTAL\s*=\s*\d+\s*$'
+    min_count: 1
+    message: 'R_OWN_1: missing CLONE_TOTAL=<N> line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*SHARED_STATE\s*=\s*(NONE|PRESENT)\s*$'
+    min_count: 1
+    message: 'R_OWN_1: missing SHARED_STATE=NONE|PRESENT line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*RATING\s*=\s*(CLEAN|ACCEPTABLE|NEEDS_REFACTORING)\s*$'
+    min_count: 1
+    message: 'R_OWN_1: missing RATING=CLEAN|ACCEPTABLE|NEEDS_REFACTORING line'
+  - type: ban_regex
+    regex: '(?im)^\s*\*{0,2}(analysis|citations)\*{0,2}\s*:'
+    message: 'R_OWN_1: markdown headers are banned; use plain text output-contract lines'
+  - type: ban_regex
+    regex: '(?m)^\s*#{1,6}\s+'
+    message: 'R_OWN_1: markdown heading lines are banned'

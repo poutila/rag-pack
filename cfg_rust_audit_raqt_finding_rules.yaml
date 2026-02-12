@@ -1,0 +1,43 @@
+finding_rules:
+  BOUNDARY_MISSING_FROM_IMPL:
+    category: error_handling
+    severity: HIGH
+    recommendation_code: REC_FROM_IMPL
+    recommendation: Add From<Error> impl at crate boundary; cross-crate error paths
+      without From<> conversion force callers into manual map_err()
+  BOUNDARY_INCOMPLETE_COVERAGE:
+    category: error_handling
+    severity: MEDIUM
+    recommendation_code: REC_BOUNDARY_REVIEW
+    recommendation: Review cross-crate error paths for completeness; ensure all engine
+      errors that reach CLI/GUI have From<> conversions
+  PORTS_NO_TEST_FAKE:
+    category: architecture
+    severity: MEDIUM
+    recommendation_code: REC_TEST_FAKE
+    recommendation: Add test fake/mock for DI port trait; untestable ports create
+      integration test gaps
+  PORTS_NO_ARC_BLANKET:
+    category: architecture
+    severity: LOW
+    recommendation_code: REC_ARC_BLANKET
+    recommendation: Consider Arc<T> blanket impl for port trait if used across threads;
+      enables shared ownership in concurrent contexts
+  TRAIT_MISSING_DEBUG:
+    category: architecture
+    severity: MEDIUM
+    recommendation_code: REC_DERIVE_DEBUG
+    recommendation: Add Debug derive to public types; required for error messages,
+      logging, and test assertions
+  TRAIT_MISSING_DISPLAY_ERROR:
+    category: error_handling
+    severity: HIGH
+    recommendation_code: REC_DISPLAY_ERROR
+    recommendation: Error types must implement Display (via thiserror or manual impl);
+      required for error propagation with ? operator
+  TRAIT_MISSING_DEFAULT_CONFIG:
+    category: architecture
+    severity: LOW
+    recommendation_code: REC_DEFAULT_CONFIG
+    recommendation: Config/settings types should derive Default for builder patterns
+      and test setup convenience

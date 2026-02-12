@@ -1,0 +1,223 @@
+version: 1.11.0
+pack_type: rust_audit_general_set3
+engine: rsqt
+response_schema: '--- REQUIRED OUTPUT FORMAT ---
+
+  MANDATORY FIRST LINES (must be the first two lines of your response; copy exactly):
+
+  VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+
+  CITATIONS=path:line(-line), path:line(-line), ...
+
+
+  After those two lines, write the answer body.
+
+
+  Hard bans:
+
+  - Do NOT output Markdown section headers like "Analysis:" or "CITATIONS:".
+
+  - Do NOT invent line numbers or file paths. Only cite tokens that appear in the evidence (including artifact anchors like
+  *.json:1).
+
+  - Do NOT include VERDICT or CITATIONS anywhere else in the body.
+
+
+  Policy:
+
+  - If a claim cannot be proven from extracted evidence, set VERDICT=INDETERMINATE and say "INSUFFICIENT EVIDENCE" + list
+  what is missing.
+
+  - Prefer deterministic extraction evidence; do NOT speculate.
+
+  '
+defaults:
+  chat_top_k: 12
+  max_tokens: 2000
+  temperature: 0.0
+questions:
+- id: R_SAFE_2
+  title: FFI / ABI Surface
+  category: safety
+  top_k: 8
+  advice_mode: llm
+  question: 'RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+
+    Inventory FFI/ABI surface:
+
+    - extern "C"
+
+    - #[no_mangle]
+
+    - #[repr(C)]
+
+    - static mut (if present)
+
+
+    If count=0 or no results, explicitly state: "No FFI/ABI surface detected."
+
+    If FFI exists, summarize the risk and what invariants must hold.
+
+    '
+  preflight:
+  - name: ffi_surface
+    cmd:
+    - ffi
+    - --format
+    - json
+  - name: static_mut_hits
+    cmd:
+    - search
+    - static mut
+    - --limit
+    - '40'
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+- id: R_SAFE_3
+  title: Runtime Failure Surface (Production unwrap/expect)
+  category: safety
+  top_k: 12
+  answer_mode: deterministic
+  advice_mode: llm
+  question: "RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.\n\nList\
+    \ production `.unwrap(` and `.expect(` call sites (not tests).\n\nVALID OUTCOMES:\n1. If unwrap_hits and expect_hits are\
+    \ EMPTY after test-file filtering:\n   State: \"No production unwrap/expect detected. All unwrap/expect calls are in test\
+    \ code.\"\n   This is a VALID \"clean\" outcome (not NOT FOUND).\n2. If hits exist, cite each with file:line and classify.\n\
+    \nFOR EACH CALL SITE (if any):\n- Cite as file_path:line from evidence\n- Include the code snippet from evidence\n- Classify\
+    \ as INVARIANT / RECOVERABLE / PANIC_OK\n\nNOTE: Empty evidence after filtering = \"no issues\" = good outcome.\n"
+  preflight:
+  - name: unwrap_hits
+    cmd:
+    - search
+    - .unwrap(
+    - --limit
+    - '120'
+    - --format
+    - json
+    transform:
+      exclude_test_files: true
+      exclude_comments: true
+      require_contains: .unwrap(
+      max_items: 30
+      render: lines
+  - name: expect_hits
+    cmd:
+    - search
+    - .expect(
+    - --limit
+    - '120'
+    - --format
+    - json
+    transform:
+      exclude_test_files: true
+      exclude_comments: true
+      require_contains: .expect(
+      max_items: 30
+      render: lines
+  expected_verdict: TRUE_POSITIVE
+- id: R_SAFE_4
+  title: Panic / TODO Surface (Production Only)
+  category: safety
+  top_k: 10
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+
+    Identify potential intentional panics / unfinished code in PRODUCTION code (not tests):
+
+    - panic!( calls
+
+    - todo!( and unimplemented!( macros
+
+
+    The evidence shows panic counts per file. Filter out test files and assess:
+
+    - If only test files have panics: "No production panic risk detected."
+
+    - If production files have panics: list them with risk assessment.
+
+    '
+  preflight:
+  - name: panic_files
+    cmd:
+    - panics
+    - --format
+    - json
+    transform:
+      exclude_test_files: true
+  - name: todo_hits
+    cmd:
+    - search
+    - todo!(
+    - --limit
+    - '60'
+    - --format
+    - json
+    transform:
+      exclude_test_files: true
+      max_items: 20
+      render: lines
+  - name: unimplemented_hits
+    cmd:
+    - search
+    - unimplemented!(
+    - --limit
+    - '60'
+    - --format
+    - json
+    transform:
+      exclude_test_files: true
+      max_items: 20
+      render: lines
+  expected_verdict: TRUE_POSITIVE
+- id: R_SAFE_5
+  title: Transmute and Raw Pointer Surface
+  category: safety
+  top_k: 8
+  advice_mode: llm
+  question: 'RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+
+    Inventory dangerous memory operations:
+
+    - transmute calls (mem::transmute, transmute_copy)
+
+    - raw pointer usage (*const T, *mut T)
+
+
+    If count=0 for both, state: "No transmute or raw pointer usage detected."
+
+    If found, list files and assess risk level (HIGH/MEDIUM/LOW).
+
+    '
+  preflight:
+  - name: transmute_files
+    cmd:
+    - transmute
+    - --format
+    - json
+  - name: raw_ptr_files
+    cmd:
+    - raw-ptrs
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+validation:
+  required_verdicts:
+  - TRUE_POSITIVE
+  - FALSE_POSITIVE
+  - INDETERMINATE
+  citation_format: path:line(-line)
+  fail_on_missing_citations: true
+  enforce_citations_from_evidence: true
+  enforce_no_new_paths: true
+  enforce_paths_must_be_cited: true
+  minimum_questions: 4
+runner:
+  plugin: rsqt_guru
+  plugin_config:
+    rules_path: cfg_rust_audit_rsqt_general_finding_rules.yaml
+    question_validators_path: cfg_rust_audit_rsqt_general_question_validators.yaml

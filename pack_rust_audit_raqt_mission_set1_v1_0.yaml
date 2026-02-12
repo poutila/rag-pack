@@ -1,0 +1,491 @@
+version: 1.0.0
+pack_type: rust_audit_raqt_mission_set1
+engine: raqt
+response_schema: 'MANDATORY FIRST LINES (must be first two lines):
+
+  VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+
+  CITATIONS=repo/path.rs:line(-line), repo/path.rs:line(-line), ...
+
+
+  Policy:
+
+  - If a claim cannot be proven from extracted evidence, set VERDICT=INDETERMINATE.
+
+  - Prefer deterministic extraction evidence; do not speculate.
+
+  - Do not add markdown section headers.'
+defaults:
+  chat_top_k: 12
+  max_tokens: 2500
+  temperature: 0.0
+questions:
+- id: R_BOUNDARY_1
+  title: Cross-Crate Error Propagation Analysis
+  category: error_handling
+  top_k: 15
+  answer_mode: llm
+  advice_mode: llm
+  question: 'Assess cross-crate error propagation using only evidence.
+
+
+    Required output lines:
+
+    ENGINE_TO_CLI_FROM=YES|NO|INSUFFICIENT
+
+    ENGINE_TO_GUI_FROM=YES|NO|INSUFFICIENT
+
+    MISSING_BOUNDARIES=<comma-separated boundary labels or NONE>
+
+    FROM_IMPL_1=...
+
+    FROM_IMPL_2=...
+
+    USAGE_1=path:line | short note
+
+    USAGE_2=path:line | short note
+
+
+    Rules:
+
+    - Enumerate impl From<...> entries individually.
+
+    - Explicitly answer engine->cli and engine->gui boundaries.
+
+    - Cite every claim.'
+  chat:
+    retry_on_schema_fail: true
+    schema_retry_attempts: 2
+    strict_response_template: 'VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+
+      CITATIONS=<comma-separated evidence tokens from CITE= lines only>
+
+      ENGINE_TO_CLI_FROM=YES|NO|INSUFFICIENT
+
+      ENGINE_TO_GUI_FROM=YES|NO|INSUFFICIENT
+
+      MISSING_BOUNDARIES=<comma-separated labels or NONE>
+
+      FROM_IMPL_1=<impl signature or NONE>
+
+      FROM_IMPL_2=<impl signature or NONE>
+
+      USAGE_1=<path:line | short note or NONE>
+
+      USAGE_2=<path:line | short note or NONE>'
+  preflight:
+  - name: raqt_error_variants
+    cmd:
+    - defs
+    - --kind
+    - enum
+    - --name
+    - Error
+    - --format
+    - json
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      max_items: 30
+      max_chars: 3000
+  - name: raqt_trait_impls
+    cmd:
+    - defs
+    - --kind
+    - object
+    - --name
+    - impl From<
+    - --format
+    - json
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      max_items: 40
+      max_chars: 4200
+  - name: raqt_cross_refs
+    cmd:
+    - refs
+    - --format
+    - json
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      require_regex:
+      - (?i)main
+      - (?i)run_cli
+      max_items: 25
+      max_chars: 3200
+  - name: from_impls
+    engine_override: rsqt
+    cmd:
+    - search
+    - impl From<
+    - --limit
+    - '60'
+    - --format
+    - json
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      exclude_test_files: true
+      exclude_comments: true
+      max_items: 40
+      max_chars: 4200
+  - name: error_type_defs
+    engine_override: rsqt
+    cmd:
+    - search
+    - enum Error
+    - --limit
+    - '40'
+    - --format
+    - json
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      exclude_test_files: true
+      exclude_comments: true
+      max_items: 30
+      max_chars: 3200
+  - name: boundary_usage
+    engine_override: rsqt
+    cmd:
+    - search
+    - .map_err(
+    - --limit
+    - '160'
+    - --format
+    - json
+    render: lines
+    block_max_chars: 6000
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      exclude_test_files: true
+      exclude_comments: true
+      require_regex:
+      - (?i)(CommandError|CliError|Error)
+      max_items: 35
+  expected_verdict: TRUE_POSITIVE
+- id: R_PORTS_1
+  title: Dependency Injection Port Coverage
+  category: architecture
+  top_k: 15
+  answer_mode: llm
+  advice_mode: llm
+  question: 'Assess dependency-injection port coverage using only evidence.
+
+
+    Required output lines:
+
+    RATING=FULLY_TESTABLE|MOSTLY_TESTABLE|GAPS_EXIST
+
+
+    For each production trait, enumerate:
+
+    - trait declaration
+
+    - impl entries
+
+    - REAL/FAKE/TEST classification
+
+    - counts per trait
+
+    - Arc<T> blanket status if present'
+  chat:
+    retry_on_schema_fail: true
+    schema_retry_attempts: 2
+    strict_response_template: 'VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+
+      CITATIONS=<comma-separated evidence tokens from CITE= lines only>
+
+      RATING=FULLY_TESTABLE|MOSTLY_TESTABLE|GAPS_EXIST
+
+      PORT_TRAIT_1=<trait name @ path:line | CLASS=PRODUCTION_PORT or NONE>
+
+      PORT_TRAIT_2=<trait name @ path:line | CLASS=PRODUCTION_PORT or NONE>
+
+      TRAIT_IMPL_1=<trait name | CLASS=REAL|FAKE|TEST | path:line or NONE>
+
+      TRAIT_IMPL_2=<trait name | CLASS=REAL|FAKE|TEST | path:line or NONE>
+
+      COVERAGE_GAPS=<comma-separated gaps or NONE>'
+  preflight:
+  - name: raqt_traits
+    cmd:
+    - defs
+    - --kind
+    - interface
+    - --limit
+    - '120'
+    - --format
+    - json
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      exclude_test_files: true
+  - name: raqt_trait_impls
+    cmd:
+    - defs
+    - --kind
+    - object
+    - --limit
+    - '300'
+    - --format
+    - json
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      exclude_test_files: true
+  - name: trait_search
+    engine_override: rsqt
+    cmd:
+    - search
+    - 'pub trait '
+    - --limit
+    - '60'
+    - --format
+    - json
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      exclude_test_files: true
+      exclude_comments: true
+  - name: dyn_usage
+    engine_override: rsqt
+    cmd:
+    - search
+    - 'Box<dyn '
+    - --limit
+    - '60'
+    - --format
+    - json
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      exclude_test_files: true
+      exclude_comments: true
+  expected_verdict: TRUE_POSITIVE
+- id: R_TRAIT_1
+  title: Trait Implementation Completeness
+  category: architecture
+  top_k: 15
+  answer_mode: llm
+  advice_mode: llm
+  question: 'Assess trait implementation completeness using only evidence.
+
+
+    Required output lines:
+
+    RATING=COMPLETE|MOSTLY_COMPLETE|GAPS_EXIST
+
+    DEBUG_COVERAGE=<N>/<M>
+
+    DISPLAY_IMPL_INVENTORY=<comma-separated signatures or NONE>
+
+    ERROR_DISPLAY_GAPS=<comma-separated type names or NONE>
+
+    CONFIG_DEFAULT_GAPS=<comma-separated type names or NONE>
+
+
+    Rules:
+
+    - Enumerate relevant Debug/Display/Default/Serialize/Deserialize evidence.
+
+    - Name each missing type explicitly.
+
+    - Return plain text only.
+
+    - Output VERDICT first and CITATIONS second, then emit each required key exactly once.
+
+    - Use NONE for unknown/empty inventories.'
+  chat:
+    retry_on_schema_fail: true
+    schema_retry_attempts: 1
+    strict_response_template: 'VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+
+      CITATIONS=<path:line(-line), path:line(-line), ...>
+
+      RATING=COMPLETE|MOSTLY_COMPLETE|GAPS_EXIST
+
+      DEBUG_COVERAGE=<integer>/<integer>
+
+      DISPLAY_IMPL_INVENTORY=<signature_1, signature_2, ... or NONE>
+
+      ERROR_DISPLAY_GAPS=<TypeA, TypeB, ... or NONE>
+
+      CONFIG_DEFAULT_GAPS=<TypeA, TypeB, ... or NONE>'
+  preflight:
+  - name: raqt_all_impls
+    cmd:
+    - defs
+    - --kind
+    - object
+    - --limit
+    - '450'
+    - --format
+    - json
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      exclude_test_files: true
+      max_items: 140
+      max_chars: 7000
+  - name: raqt_all_structs
+    cmd:
+    - defs
+    - --kind
+    - struct
+    - --limit
+    - '300'
+    - --format
+    - json
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      exclude_test_files: true
+  - name: raqt_all_enums
+    cmd:
+    - defs
+    - --kind
+    - enum
+    - --limit
+    - '220'
+    - --format
+    - json
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      exclude_test_files: true
+  - name: derive_search
+    engine_override: rsqt
+    cmd:
+    - search
+    - '#[derive('
+    - --limit
+    - '120'
+    - --format
+    - json
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      exclude_test_files: true
+      exclude_comments: true
+      max_items: 140
+      max_chars: 7000
+  - name: display_impls
+    engine_override: rsqt
+    cmd:
+    - search
+    - 'impl std::fmt::Display for '
+    - --limit
+    - '120'
+    - --format
+    - json
+    render: lines
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      exclude_test_files: true
+      exclude_comments: true
+      max_items: 60
+  - name: default_impls
+    engine_override: rsqt
+    cmd:
+    - search
+    - 'impl Default for '
+    - --limit
+    - '120'
+    - --format
+    - json
+    render: lines
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      exclude_test_files: true
+      exclude_comments: true
+      max_items: 60
+  - name: debug_impls
+    engine_override: rsqt
+    cmd:
+    - search
+    - 'impl std::fmt::Debug for '
+    - --limit
+    - '120'
+    - --format
+    - json
+    render: lines
+    transform:
+      include_path_regex:
+      - (^|/)crates/
+      - (^|/)src/
+      exclude_path_regex:
+      - (^|/)audit_runs(/|$)
+      exclude_test_files: true
+      exclude_comments: true
+      max_items: 60
+  expected_verdict: TRUE_POSITIVE
+validation:
+  required_verdicts:
+  - TRUE_POSITIVE
+  - FALSE_POSITIVE
+  - INDETERMINATE
+  citation_format: path:line(-line)
+  fail_on_missing_citations: true
+  enforce_citations_from_evidence: true
+  enforce_no_new_paths: true
+  enforce_paths_must_be_cited: true
+  minimum_questions: 3
+runner:
+  plugin: rsqt_guru
+  plugin_config:
+    rules_path: cfg_rust_audit_raqt_mission_finding_rules.yaml
+    question_validators_path: cfg_rust_audit_raqt_mission_question_validators.yaml

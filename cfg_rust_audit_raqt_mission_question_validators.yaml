@@ -1,0 +1,255 @@
+defaults:
+  test_path_patterns:
+  - (^|/)(tests)(/|$)
+  - (^|/)(testdata|fixtures)(/|$)
+  - (^|/)[^/]*_tests?\.rs$
+  - (^|/)test_[^/]+\.rs$
+
+validators:
+  R_BOUNDARY_1:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_BOUNDARY_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_BOUNDARY_1: Missing CITATIONS line with path:line token'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*ENGINE_TO_CLI_FROM\s*=\s*(YES|NO|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_BOUNDARY_1: Missing ENGINE_TO_CLI_FROM line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*ENGINE_TO_GUI_FROM\s*=\s*(YES|NO|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_BOUNDARY_1: Missing ENGINE_TO_GUI_FROM line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*MISSING_BOUNDARIES\s*=\s*(.+|NONE)\s*$'
+    min_count: 1
+    message: 'R_BOUNDARY_1: Missing MISSING_BOUNDARIES line'
+
+  R_PORTS_1:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_PORTS_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_PORTS_1: Missing CITATIONS line with path:line token'
+  - type: require_min_inline_regex_count
+    regex: '(?i)RATING\s*=\s*(FULLY_TESTABLE|MOSTLY_TESTABLE|GAPS_EXIST)'
+    min_count: 1
+    message: 'R_PORTS_1: Missing RATING line'
+  - type: require_min_inline_regex_count
+    regex: '(?i)\b(REAL|FAKE|TEST)\b'
+    min_count: 2
+    message: 'R_PORTS_1: Must classify impls as REAL/FAKE/TEST'
+
+  R_TRAIT_1:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_TRAIT_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_TRAIT_1: Missing CITATIONS line with path:line token'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*RATING\s*=\s*(COMPLETE|MOSTLY_COMPLETE|GAPS_EXIST)\s*$'
+    min_count: 1
+    message: 'R_TRAIT_1: Missing RATING line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*DEBUG_COVERAGE\s*=\s*\d+\s*/\s*\d+\s*$'
+    min_count: 1
+    message: 'R_TRAIT_1: Missing DEBUG_COVERAGE line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*DISPLAY_IMPL_INVENTORY\s*=\s*.+$'
+    min_count: 1
+    message: 'R_TRAIT_1: Missing DISPLAY_IMPL_INVENTORY line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*ERROR_DISPLAY_GAPS\s*=\s*.+$'
+    min_count: 1
+    message: 'R_TRAIT_1: Missing ERROR_DISPLAY_GAPS line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*CONFIG_DEFAULT_GAPS\s*=\s*.+$'
+    min_count: 1
+    message: 'R_TRAIT_1: Missing CONFIG_DEFAULT_GAPS line'
+
+  R_MISSION_RUNTIME_1:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_MISSION_RUNTIME_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_MISSION_RUNTIME_1: Missing CITATIONS line with path:line token'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*TRUST_GATE_DOC\s*=\s*(YES|NO|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_RUNTIME_1: Missing TRUST_GATE_DOC line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*DOCTOR_STATUS\s*=\s*(PASS|WARN|FAIL|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_RUNTIME_1: Missing DOCTOR_STATUS line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*STRICT_JSON_MODE\s*=\s*(OK|BROKEN|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_RUNTIME_1: Missing STRICT_JSON_MODE line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*PROFILE_CI_MODE\s*=\s*(ACCEPTED|REJECTED|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_RUNTIME_1: Missing PROFILE_CI_MODE line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*FAIL_ON_STALE_FLAG\s*=\s*(ACCEPTED|REJECTED|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_RUNTIME_1: Missing FAIL_ON_STALE_FLAG line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*KIND_ALIAS_FN_FUNCTION\s*=\s*(YES|NO|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_RUNTIME_1: Missing KIND_ALIAS_FN_FUNCTION line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*SCHEMA_COLUMNS\s*=\s*(\d+|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_RUNTIME_1: Missing SCHEMA_COLUMNS line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*STAT_NUM_ROWS\s*=\s*(\d+|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_RUNTIME_1: Missing STAT_NUM_ROWS line'
+
+  R_MISSION_CALLGRAPH_1:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_MISSION_CALLGRAPH_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_MISSION_CALLGRAPH_1: Missing CITATIONS line with path:line token'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*EDGE_ROWS\s*=\s*(\d+|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_CALLGRAPH_1: Missing EDGE_ROWS line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*SELF_EDGES_PRESENT\s*=\s*(YES|NO|UNKNOWN)\s*$'
+    min_count: 1
+    message: 'R_MISSION_CALLGRAPH_1: Missing SELF_EDGES_PRESENT line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*TOP_CALLERS\s*=\s*.+$'
+    min_count: 1
+    message: 'R_MISSION_CALLGRAPH_1: Missing TOP_CALLERS line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*TOP_CALLEES\s*=\s*.+$'
+    min_count: 1
+    message: 'R_MISSION_CALLGRAPH_1: Missing TOP_CALLEES line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*REFACTOR_BOUNDARY_CANDIDATES\s*=\s*.+$'
+    min_count: 1
+    message: 'R_MISSION_CALLGRAPH_1: Missing REFACTOR_BOUNDARY_CANDIDATES line'
+
+  R_MISSION_SAFETY_1:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_MISSION_SAFETY_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_MISSION_SAFETY_1: Missing CITATIONS line with path:line token'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*UNSAFE_SURFACE\s*=\s*(NONE|LOW|MEDIUM|HIGH|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_SAFETY_1: Missing UNSAFE_SURFACE line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*FFI_SURFACE\s*=\s*(NONE|LOW|MEDIUM|HIGH|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_SAFETY_1: Missing FFI_SURFACE line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*PROD_PANIC_SURFACE\s*=\s*(NONE|LOW|MEDIUM|HIGH|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_SAFETY_1: Missing PROD_PANIC_SURFACE line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*PROD_UNWRAP_SURFACE\s*=\s*(NONE|LOW|MEDIUM|HIGH|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_SAFETY_1: Missing PROD_UNWRAP_SURFACE line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*SUPPLY_CHAIN_RISK\s*=\s*(LOW|MEDIUM|HIGH|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_SAFETY_1: Missing SUPPLY_CHAIN_RISK line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*SAFETY_GATE_1\s*=\s*.+$'
+    min_count: 1
+    message: 'R_MISSION_SAFETY_1: Missing SAFETY_GATE_1 line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*SAFETY_GATE_2\s*=\s*.+$'
+    min_count: 1
+    message: 'R_MISSION_SAFETY_1: Missing SAFETY_GATE_2 line'
+
+  R_MISSION_RAG_1:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_MISSION_RAG_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_MISSION_RAG_1: Missing CITATIONS line with path:line token'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*RAG_INDEX_EXECUTED\s*=\s*(YES|NO|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_RAG_1: Missing RAG_INDEX_EXECUTED line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*RAG_SEARCH_RESULT_COUNT\s*=\s*(\d+|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_RAG_1: Missing RAG_SEARCH_RESULT_COUNT line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*CHAT_STUB_EXECUTED\s*=\s*(YES|NO|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_RAG_1: Missing CHAT_STUB_EXECUTED line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*PROMPT_PROFILE_GROUNDED_SUPPORTED\s*=\s*(YES|NO|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_RAG_1: Missing PROMPT_PROFILE_GROUNDED_SUPPORTED line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*TOP_REFACTOR_SEAMS\s*=\s*.+$'
+    min_count: 1
+    message: 'R_MISSION_RAG_1: Missing TOP_REFACTOR_SEAMS line'
+
+  R_MISSION_REFACTOR_PLAN_1:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_MISSION_REFACTOR_PLAN_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_MISSION_REFACTOR_PLAN_1: Missing CITATIONS line with path:line token'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*PLAN_READINESS\s*=\s*(READY|NEEDS_MORE_EVIDENCE)\s*$'
+    min_count: 1
+    message: 'R_MISSION_REFACTOR_PLAN_1: Missing PLAN_READINESS line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*PHASE_1_ACTIONS\s*=\s*.+$'
+    min_count: 1
+    message: 'R_MISSION_REFACTOR_PLAN_1: Missing PHASE_1_ACTIONS line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*PHASE_2_ACTIONS\s*=\s*.+$'
+    min_count: 1
+    message: 'R_MISSION_REFACTOR_PLAN_1: Missing PHASE_2_ACTIONS line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*PHASE_3_ACTIONS\s*=\s*.+$'
+    min_count: 1
+    message: 'R_MISSION_REFACTOR_PLAN_1: Missing PHASE_3_ACTIONS line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*BLOCKERS\s*=\s*.+$'
+    min_count: 1
+    message: 'R_MISSION_REFACTOR_PLAN_1: Missing BLOCKERS line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*SAFETY_GATES\s*=\s*.+$'
+    min_count: 1
+    message: 'R_MISSION_REFACTOR_PLAN_1: Missing SAFETY_GATES line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*COVERAGE_GAPS\s*=\s*.+$'
+    min_count: 1
+    message: 'R_MISSION_REFACTOR_PLAN_1: Missing COVERAGE_GAPS line'

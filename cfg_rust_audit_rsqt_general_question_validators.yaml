@@ -1,0 +1,230 @@
+defaults:
+  # Canonical test-path regex defaults (SSOT).
+  # Used by:
+  # - rsqt_guru.py (validator: non-test citations requirement)
+  # - run_pack.py (transform: exclude_test_files) when step.transform.test_path_patterns not provided
+  test_path_patterns:
+    - '(^|/)(tests)(/|$)'
+    - '(^|/)(testdata|fixtures)(/|$)'
+    - '(^|/)[^/]*_tests?\.rs$'
+    - '(^|/)test_[^/]+\.rs$'
+
+validators:
+  R_SAFE_3:
+  - type: require_non_test_fileline_citations_if_regex
+    trigger_regex: (?i)(\.unwrap\(|\.expect\()|(production.*(unwrap|expect))
+    clean_outcome_regex: (?i)(no production (unwrap|expect)|all.*(unwrap|expect).*(test|cfg.test))
+    message_no_citations: 'R_SAFE_3: claims production unwrap/expect but provides
+      no file:line citations'
+    message_all_test: 'R_SAFE_3: unwrap/expect citations are all in test paths; must
+      cite non-test paths or report clean outcome'
+    # test_path_patterns: inherited from defaults (SSOT)
+  - type: require_min_inline_regex_count_if_regex
+    # If model claims "no production" or "all in tests", require at least one evidence location
+    if_regex: '(?i)(no production|all.*(unwrap|expect).*(test|cfg\.test)|only test)'
+    regex: '(?i)(?![A-Za-z0-9_.\-/]*/tests/)[A-Za-z0-9_.\-/]+\.rs:\d+|R_SAFE_3_(?:unwrap_hits|expect_hits)\.json(?::\d+(?:-\d+)?)?'
+    min_count: 1
+    message: 'R_SAFE_3: if claiming clean/only-tests, must cite at least one evidence location (non-test .rs:line or R_SAFE_3_*_hits.json[:line])'
+  R_API_3:
+  - type: require_min_inline_regex_count
+    regex: 'pub use\s+[^;]+;|NO_PUB_USE_EVIDENCE=R_API_3_pub_use_hits\.json:1'
+    min_count: 1
+    message: 'R_API_3: must provide inline `pub use ...;` rows or explicit NO_PUB_USE_EVIDENCE sentinel anchored to artifact token'
+
+  R_META_1:
+  - type: require_min_inline_regex_count
+    regex: '(?i)(?:[A-Za-z0-9_.-]+/)*Cargo\.toml|R_META_1_cargo_toml_files\.json:1'
+    min_count: 1
+    message: 'R_META_1: must report Cargo.toml evidence (path token or artifact anchor)'
+  - type: require_min_inline_regex_count
+    regex: '(?i)(?:[A-Za-z0-9_.-]+/)*Cargo\.lock'
+    min_count: 1
+    message: 'R_META_1: must mention Cargo.lock path/token from evidence'
+  - type: require_min_inline_regex_count
+    regex: '(?i)(?:[A-Za-z0-9_.-]+/)*rust-toolchain\.toml|RUST_TOOLCHAIN_PATH=NOT_FOUND|R_META_1_toolchain\.json:1'
+    min_count: 1
+    message: 'R_META_1: must report rust-toolchain status (path when present, or explicit NOT_FOUND anchored to toolchain evidence)'
+
+  R_DOC_COVERAGE_1:
+  - type: require_min_inline_regex_count
+    # Force citing doc evidence artifact token so the model cannot pass by citing unrelated .rs anchors
+    regex: 'R_DOC_COVERAGE_1_doc_analysis\.json:1'
+    min_count: 1
+    message: 'R_DOC_COVERAGE_1: must cite doc_analysis artifact token (expected R_DOC_COVERAGE_1_doc_analysis.json:1)'
+  - type: require_min_inline_regex_count
+    # Require the DOC_SUMMARY line to actually be referenced (guards against fabricated counts)
+    regex: '(?i)\bDOC_SUMMARY\b'
+    min_count: 1
+    message: 'R_DOC_COVERAGE_1: must reference DOC_SUMMARY counts in the answer'
+
+  R_DOC_UNDOC_1:
+  - type: require_min_inline_regex_count
+    regex: 'R_DOC_UNDOC_1_doc_analysis\.json:1'
+    min_count: 1
+    message: 'R_DOC_UNDOC_1: must cite doc_analysis artifact token (expected R_DOC_UNDOC_1_doc_analysis.json:1)'
+  - type: require_min_inline_regex_count
+    # Prefer a non-test Rust location; artifact anchor fallback is allowed when evidence view is truncated.
+    regex: '(?i)(?![A-Za-z0-9_.\-/]*/tests/)[A-Za-z0-9_.\-/]+\.rs:\d+|R_DOC_UNDOC_1_doc_analysis\.json:1'
+    min_count: 1
+    message: 'R_DOC_UNDOC_1: must include a non-test .rs:line citation when available, otherwise keep doc_analysis artifact anchor'
+
+  # ── Universal VERDICT + CITATIONS enforcement for all remaining QIDs ──
+  R_HEALTH_1:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_HEALTH_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_HEALTH_1: Missing CITATIONS line with at least one path:line token'
+
+  R_META_2:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_META_2: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_META_2: Missing CITATIONS line with at least one path:line token'
+
+  R_API_1:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_API_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_API_1: Missing CITATIONS line with at least one path:line token'
+
+  R_API_2:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_API_2: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_API_2: Missing CITATIONS line with at least one path:line token'
+
+  R_RISK_1:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_RISK_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_RISK_1: Missing CITATIONS line with at least one path:line token'
+
+  R_SAFE_1:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_SAFE_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_SAFE_1: Missing CITATIONS line with at least one path:line token'
+
+  R_SAFE_2:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_SAFE_2: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_SAFE_2: Missing CITATIONS line with at least one path:line token'
+
+  R_SAFE_4:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_SAFE_4: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_SAFE_4: Missing CITATIONS line with at least one path:line token'
+
+  R_SAFE_5:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_SAFE_5: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_SAFE_5: Missing CITATIONS line with at least one path:line token'
+
+  R_SAFE_6:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_SAFE_6: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_SAFE_6: Missing CITATIONS line with at least one path:line token'
+
+  R_TEST_1:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_TEST_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_TEST_1: Missing CITATIONS line with at least one path:line token'
+
+  R_TEST_2:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_TEST_2: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_TEST_2: Missing CITATIONS line with at least one path:line token'
+
+  R_CARGO_1:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_CARGO_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_CARGO_1: Missing CITATIONS line with at least one path:line token'
+
+  R_CARGO_2:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_CARGO_2: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_CARGO_2: Missing CITATIONS line with at least one path:line token'
+
+  R_CARGO_3:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_CARGO_3: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_CARGO_3: Missing CITATIONS line with at least one path:line token'
+
+  R_DOC_MATCH_1:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+    min_count: 1
+    message: 'R_DOC_MATCH_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_DOC_MATCH_1: Missing CITATIONS line with at least one path:line token'

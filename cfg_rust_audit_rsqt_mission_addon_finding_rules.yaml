@@ -1,0 +1,60 @@
+finding_rules:
+  SAFE_UNSAFE_PRESENT:
+    category: safety
+    severity: HIGH
+    recommendation_code: REC_UNSAFE
+    recommendation: Require explicit SAFETY invariants, Miri coverage, and targeted tests before refactor merge.
+
+  SAFE_FFI_PRESENT:
+    category: safety
+    severity: HIGH
+    recommendation_code: REC_FFI
+    recommendation: Document ABI invariants, add fuzz/integration tests, and gate unsafe boundary changes.
+
+  SAFE_PROD_UNWRAP_PRESENT:
+    category: safety
+    severity: HIGH
+    recommendation_code: REC_PROD_UNWRAP
+    recommendation: Replace recoverable production unwrap/expect with typed Result propagation.
+
+  SAFE_PANIC_PRESENT:
+    category: safety
+    severity: MEDIUM
+    recommendation_code: REC_PANIC
+    recommendation: Convert production panic/todo/unimplemented paths to explicit fault contracts or containment boundaries.
+
+  META_BUILD_RS_PRESENT:
+    category: supply_chain
+    severity: HIGH
+    recommendation_code: REC_BUILD_RS
+    recommendation: Audit build.rs behavior and transitive build dependencies for reproducibility and trust.
+
+  CARGO_PROC_MACRO:
+    category: supply_chain
+    severity: HIGH
+    recommendation_code: REC_PROC_MACRO
+    recommendation: Review proc-macro crates as high-risk code-generation inputs and pin versions.
+
+  MISSION_SCHEMA_DRIFT:
+    category: mission_ops
+    severity: HIGH
+    recommendation_code: REC_SCHEMA_DRIFT
+    recommendation: Freeze schema/column contracts and fail CI on drift before refactor rollout.
+
+  MISSION_CLI_HELP_WARN:
+    category: mission_ops
+    severity: MEDIUM
+    recommendation_code: REC_CLI_HELP
+    recommendation: Resolve CLI help audit warnings to reduce operator error in emergency procedures.
+
+  MISSION_RAG_RETRIEVAL_WEAK:
+    category: rag
+    severity: MEDIUM
+    recommendation_code: REC_RAG_RETRIEVAL
+    recommendation: Re-tune retrieval strategy and top-k; require explain diagnostics before using outputs for refactor decisions.
+
+  MISSION_INDEX_REGEN_FAILURE:
+    category: mission_ops
+    severity: CRITICAL
+    recommendation_code: REC_INDEX_REGEN
+    recommendation: Block refactor activities until generate/full and strict stale checks pass deterministically.

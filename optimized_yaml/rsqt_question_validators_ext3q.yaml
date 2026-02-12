@@ -1,0 +1,79 @@
+validators:
+  R_ERR_INV_1:
+  - type: require_non_test_fileline_citations_if_regex
+    trigger_regex: (?i)(expect\(|unwrap\()|(From<)|(impl\s+From)|(thiserror)|(anyhow)
+    message_no_citations: 'R_ERR_INV_1: claims error types or propagation patterns but provides no file:line citations'
+    message_all_test: 'R_ERR_INV_1: error citations are all in test paths; must cite production code paths'
+    test_path_patterns:
+    - ^tests/
+    - /tests/
+    - _test\.rs$
+    - _tests\.rs$
+  - type: require_min_inline_regex_count
+    regex: (?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)
+    min_count: 1
+    message: 'R_ERR_INV_1: Missing/invalid VERDICT line (must be TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+  - type: require_min_inline_regex_count
+    regex: (?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+
+    min_count: 1
+    message: 'R_ERR_INV_1: Missing CITATIONS line with at least one path:line token (artifact anchors like *.json:1 are allowed)'
+  R_ERR_RISK_1:
+  - type: require_non_test_fileline_citations_if_regex
+    trigger_regex: (?i)(prod_unwraps|prod_expects|unwrap\(|expect\()|(map_err\()|(INVARIANT|RECOVERABLE)|(From<Error)|(impl\s+From<)
+    message_no_citations: 'R_ERR_RISK_1: makes risk/propagation claims but provides no file:line citations'
+    message_all_test: 'R_ERR_RISK_1: citations are all in test paths; must cite production code paths'
+    test_path_patterns:
+    - ^tests/
+    - /tests/
+    - _test\.rs$
+    - _tests\.rs$
+  - type: require_min_inline_regex_count
+    regex: (?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)
+    min_count: 1
+    message: 'R_ERR_RISK_1: Missing/invalid VERDICT line (must be TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+  - type: require_min_inline_regex_count
+    regex: (?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+
+    min_count: 1
+    message: 'R_ERR_RISK_1: Missing CITATIONS line with at least one path:line token (artifact anchors like *.json:1 are allowed)'
+  R_DEPS_1:
+  - type: require_non_test_fileline_citations_if_regex
+    trigger_regex: (?i)(Cargo\.toml)|(dependencies)|(git\s*=\s*")|(path\s*=\s*")
+    message_no_citations: 'R_DEPS_1: claims dependency declarations but provides no file:line citations'
+    message_all_test: 'R_DEPS_1: dependency citations are all in test paths; must cite Cargo.toml or production paths'
+    test_path_patterns:
+    - ^tests/
+    - /tests/
+    - _test\.rs$
+    - _tests\.rs$
+  - type: require_min_inline_regex_count
+    regex: (?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)
+    min_count: 1
+    message: 'R_DEPS_1: Missing/invalid VERDICT line (must be TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+  - type: require_min_inline_regex_count
+    regex: (?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+
+    min_count: 1
+    message: 'R_DEPS_1: Missing CITATIONS line with at least one path:line token (artifact anchors like *.json:1 are allowed)'
+  R_OWN_1:
+  - type: require_non_test_fileline_citations_if_regex
+    trigger_regex: (?i)(\.clone\(\))|(Arc<Mutex)|(Arc<RwLock)|(Rc<)|(Box<dyn)|(pub fn.*String)|(pub fn.*Vec)
+    message_no_citations: 'R_OWN_1: claims ownership or cloning patterns but provides no file:line citations'
+    message_all_test: 'R_OWN_1: ownership citations are all in test paths; must cite production code paths'
+    test_path_patterns:
+    - ^tests/
+    - /tests/
+    - _test\.rs$
+    - _tests\.rs$
+  - type: require_min_inline_regex_count
+    regex: (?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)
+    min_count: 1
+    message: 'R_OWN_1: Missing/invalid VERDICT line (must be TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)'
+  - type: require_min_inline_regex_count
+    regex: (?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+
+    min_count: 1
+    message: 'R_OWN_1: Missing CITATIONS line with at least one path:line token (artifact anchors like *.json:1 are allowed)'
+defaults:
+  test_path_patterns:
+  - (^|/)(tests)(/|$)
+  - (^|/)(testdata|fixtures)(/|$)
+  - (^|/)[^/]*_tests?\.rs$
+  - (^|/)test_[^/]+\.rs$

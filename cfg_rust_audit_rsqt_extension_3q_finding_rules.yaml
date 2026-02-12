@@ -1,0 +1,30 @@
+finding_rules:
+  SAFE_PROD_UNWRAP_PRESENT:
+    category: safety
+    severity: MEDIUM
+    recommendation_code: REC_PROD_UNWRAP
+    recommendation: Replace recoverable unwrap/expect with Result; keep invariant
+      panics explicit
+  ERR_MISSING_FROM_IMPL:
+    category: error_handling
+    severity: MEDIUM
+    recommendation_code: REC_FROM_IMPL
+    recommendation: Add From<SubError> impls to bridge crate boundaries; avoid
+      .map_err() as compensating pattern
+  ERR_ANYHOW_IN_LIBRARY:
+    category: error_handling
+    severity: LOW
+    recommendation_code: REC_ANYHOW_LIB
+    recommendation: Prefer typed errors (thiserror) over anyhow in library crates
+      for better API contracts
+  DEPS_GIT_SOURCE:
+    category: cargo
+    severity: HIGH
+    recommendation_code: REC_GIT_DEP
+    recommendation: Pin git dependencies to specific rev/tag; prefer crates.io
+      for reproducibility
+  DEPS_NO_MSRV:
+    category: cargo
+    severity: LOW
+    recommendation_code: REC_MSRV
+    recommendation: Declare rust-version in Cargo.toml for compatibility signaling

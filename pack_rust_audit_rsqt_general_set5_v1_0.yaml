@@ -1,0 +1,257 @@
+version: 1.11.0
+pack_type: rust_audit_general_set5
+engine: rsqt
+response_schema: '--- REQUIRED OUTPUT FORMAT ---
+
+  MANDATORY FIRST LINES (must be the first two lines of your response; copy exactly):
+
+  VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+
+  CITATIONS=path:line(-line), path:line(-line), ...
+
+
+  After those two lines, write the answer body.
+
+
+  Hard bans:
+
+  - Do NOT output Markdown section headers like "Analysis:" or "CITATIONS:".
+
+  - Do NOT invent line numbers or file paths. Only cite tokens that appear in the evidence (including artifact anchors like
+  *.json:1).
+
+  - Do NOT include VERDICT or CITATIONS anywhere else in the body.
+
+
+  Policy:
+
+  - If a claim cannot be proven from extracted evidence, set VERDICT=INDETERMINATE and say "INSUFFICIENT EVIDENCE" + list
+  what is missing.
+
+  - Prefer deterministic extraction evidence; do NOT speculate.
+
+  '
+defaults:
+  chat_top_k: 12
+  max_tokens: 2000
+  temperature: 0.0
+questions:
+- id: R_CARGO_2
+  title: Feature Definitions and Feature Usage
+  category: cargo
+  top_k: 12
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+
+    Inventory Cargo features:
+
+    A) crate-defined [features] blocks (may be none)
+
+    B) dependency feature usage lines (features = [...], default-features = false)
+
+
+    Quote feature blocks/lines; do not invent.
+
+    '
+  preflight:
+  - name: features_blocks
+    cmd:
+    - query
+    - --file
+    - Cargo.toml
+    - --contains
+    - '[features]'
+    - --include-all-files
+    - --columns
+    - file_path
+    - line_start
+    - line_end
+    - source_text
+    - --limit
+    - '200'
+    - --format
+    - json
+    render: block
+    fence_lang: toml
+    block_max_chars: 8000
+  - name: dep_features_hits
+    cmd:
+    - search
+    - features = [
+    - --include-all-files
+    - --limit
+    - '200'
+    - --format
+    - json
+  - name: default_features_hits
+    cmd:
+    - search
+    - default-features
+    - --include-all-files
+    - --limit
+    - '200'
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+- id: R_CARGO_3
+  title: Build Scripts and Proc-macro Risk
+  category: cargo
+  top_k: 10
+  answer_mode: deterministic
+  advice_mode: llm
+  question: 'RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+
+    Detect build-time risk surface:
+
+    - presence of build.rs files (build scripts)
+
+    - proc-macro crates (proc-macro = true in Cargo.toml)
+
+    - procedural macro usage indicators (proc_macro, TokenStream)
+
+
+    Summarize supply-chain risk and mitigation recommendations.
+
+    '
+  preflight:
+  - name: build_rs_query
+    cmd:
+    - query
+    - --file
+    - build.rs
+    - --include-all-files
+    - --columns
+    - file_path
+    - source_text
+    - --limit
+    - '50'
+    - --format
+    - json
+  - name: proc_macro_flag
+    cmd:
+    - query
+    - --file
+    - Cargo.toml
+    - --contains
+    - proc-macro = true
+    - --include-all-files
+    - --columns
+    - file_path
+    - line_start
+    - line_end
+    - source_text
+    - --limit
+    - '50'
+    - --format
+    - json
+  - name: proc_macro_code_hits
+    cmd:
+    - search
+    - proc_macro
+    - --limit
+    - '80'
+    - --format
+    - json
+  - name: tokenstream_hits
+    cmd:
+    - search
+    - TokenStream
+    - --limit
+    - '80'
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+- id: R_DOC_COVERAGE_1
+  title: Doc Coverage Summary (Bounded Structured)
+  category: documentation
+  top_k: 10
+  answer_mode: deterministic
+  advice_mode: llm
+  question: "RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.\n\nAnalyze\
+    \ documentation coverage using ONLY the structured evidence below.\n\nBOUND: The evidence is truncated (max_items). Compute\
+    \ metrics ONLY over the entities shown in evidence (do NOT claim repo-global totals).\nUse DOC_SUMMARY counts; do not\
+    \ claim repo-global totals beyond DOC_SUMMARY.\n\nReport:\n1) Coverage stats over shown entities:\n   - For visibility=pub:\
+    \ count with docs vs without docs\n   - Overall (all shown entities): count with docs vs without docs\n2) Top 3 actionable\
+    \ recommendations (pub-first priority).\n"
+  preflight:
+  - name: doc_analysis
+    cmd:
+    - docs
+    - --format
+    - json
+    transform:
+      render: list
+      max_items: 50
+      max_chars: 16000
+  expected_verdict: TRUE_POSITIVE
+- id: R_DOC_UNDOC_1
+  title: Undocumented Public API Examples (Bounded)
+  category: documentation
+  top_k: 10
+  answer_mode: deterministic
+  advice_mode: llm
+  question: "MANDATORY FIRST LINES (write these two lines first, before any list; copy exactly):\nVERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE\n\
+    CITATIONS=path:line(-line), path:line(-line), ...\n\nTask: List up to 10 undocumented public items (visibility=pub) from\
+    \ the structured evidence.\nUse DOC_SUMMARY counts; do not claim repo-global totals beyond DOC_SUMMARY.\n\nOutput format\
+    \ (exact; ONE line per item; keep each line short):\n1. <signature-or-name> \u2014 <path:line> \u2014 undocumented (doc.has_doc=false)\n\
+    \nRules:\n- Max 10 items. If fewer exist, list all shown.\n- Do NOT add prose paragraphs. No sub-bullets.\n- Always include\
+    \ at least one <path:line> per item (from evidence).\n- Even if you think evidence is insufficient, still output VERDICT\
+    \ and CITATIONS (first lines already written).\n"
+  preflight:
+  - name: doc_analysis
+    cmd:
+    - docs
+    - --format
+    - json
+    transform:
+      render: list
+      max_items: 50
+      max_chars: 16000
+  expected_verdict: TRUE_POSITIVE
+- id: R_DOC_MATCH_1
+  title: "Doc\u2194Code Semantic Alignment"
+  category: documentation
+  top_k: 12
+  answer_mode: deterministic
+  advice_mode: llm
+  question: "RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.\n\nVerify\
+    \ that documentation comments accurately describe the function/struct signatures.\n\nThe evidence is a numbered list.\
+    \ Each line has the format:\n  N. file:line-range | sig: <signature> | doc: <documentation text> | +entity_id=...\n\n\
+    The \"sig:\" field is the actual Rust code signature.\nThe \"doc:\" field is the /// documentation comment attached to\
+    \ it.\n\nYOUR TASK: For the first 15 items:\n1. Read the sig: field (this IS the code)\n2. Read the doc: field (this IS\
+    \ the documentation)\n3. Compare: Does the doc accurately describe what the signature declares?\n4. Rate each: ACCURATE\
+    \ / PARTIAL / MISLEADING\n\nOutput format:\n| File:Line | Signature | Doc Summary | Rating |\n|-----------|-----------|-------------|--------|\n\
+    | file:line | signature text | brief doc summary | ACCURATE/PARTIAL/MISLEADING |\n\nIMPORTANT: All required data IS in\
+    \ the evidence above.\nThe sig: and doc: fields are already extracted for you.\nDo NOT say \"NOT FOUND\" - read the numbered\
+    \ list items.\n"
+  preflight:
+  - name: doc_entities
+    cmd:
+    - docs
+    - --format
+    - json
+    transform:
+      filter_fn: compact_docs
+      render: list
+      max_items: 30
+      max_chars: 10000
+  expected_verdict: TRUE_POSITIVE
+validation:
+  required_verdicts:
+  - TRUE_POSITIVE
+  - FALSE_POSITIVE
+  - INDETERMINATE
+  citation_format: path:line(-line)
+  fail_on_missing_citations: true
+  enforce_citations_from_evidence: true
+  enforce_no_new_paths: true
+  enforce_paths_must_be_cited: true
+  minimum_questions: 5
+runner:
+  plugin: rsqt_guru
+  plugin_config:
+    rules_path: cfg_rust_audit_rsqt_general_finding_rules.yaml
+    question_validators_path: cfg_rust_audit_rsqt_general_question_validators.yaml

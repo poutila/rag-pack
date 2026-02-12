@@ -1,0 +1,246 @@
+version: 1.0.0
+pack_type: rust_audit_rsqt_docs_focus_4q
+engine: rsqt
+response_schema: |-
+  --- REQUIRED OUTPUT FORMAT ---
+  MANDATORY FIRST LINES (must be the first two lines of your response; copy exactly):
+  VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+  CITATIONS=path:line(-line), path:line(-line), ...
+
+  After those two lines, write the answer body.
+
+  Hard bans:
+  - Do NOT output Markdown section headers like "Analysis:" or "CITATIONS:".
+  - Do NOT invent line numbers or file paths. Only cite tokens that appear in the evidence (including artifact anchors like *.json:1).
+  - Do NOT include VERDICT or CITATIONS anywhere else in the body.
+
+  Policy:
+  - If a claim cannot be proven from extracted evidence, set VERDICT=INDETERMINATE and say "INSUFFICIENT EVIDENCE" + list what is missing.
+  - Prefer deterministic extraction evidence; do NOT speculate.
+defaults:
+  chat_top_k: 12
+  max_tokens: 2200
+  temperature: 0.0
+questions:
+- id: R_DOC_COVERAGE_1
+  title: Doc Coverage Summary (Bounded Structured)
+  category: documentation
+  top_k: 10
+  answer_mode: llm
+  advice_mode: llm
+  question: |-
+    RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+    Analyze documentation coverage using ONLY the structured evidence below.
+
+    BOUND: The evidence is truncated (max_items). Compute metrics ONLY over the entities shown in evidence (do NOT claim repo-global totals).
+    Use DOC_SUMMARY counts; do not claim repo-global totals beyond DOC_SUMMARY.
+
+    Report:
+    1) Coverage stats over shown entities:
+       - For visibility=pub: count with docs vs without docs
+       - Overall (all shown entities): count with docs vs without docs
+    2) Top 3 actionable recommendations (pub-first priority).
+  chat:
+    retry_on_schema_fail: true
+    schema_retry_attempts: 2
+    strict_response_template: |-
+      VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+      CITATIONS=<comma-separated evidence tokens from CITE= lines only>
+      DOC_SUMMARY=<bounded summary using doc_analysis artifact>
+      PUB_COVERAGE=<X with docs vs Y without docs (shown entities only)>
+      OVERALL_COVERAGE=<X with docs vs Y without docs (shown entities only)>
+      RECOMMENDATION_1=<concrete actionable recommendation>
+      RECOMMENDATION_2=<concrete actionable recommendation>
+      RECOMMENDATION_3=<concrete actionable recommendation>
+  preflight:
+  - name: doc_analysis
+    cmd:
+    - docs
+    - --format
+    - json
+    transform:
+      render: list
+      max_items: 50
+      max_chars: 16000
+  expected_verdict: TRUE_POSITIVE
+
+- id: R_DOC_UNDOC_1
+  title: Undocumented Public API Examples (Bounded)
+  category: documentation
+  top_k: 10
+  answer_mode: llm
+  advice_mode: llm
+  question: |-
+    MANDATORY FIRST LINES (write these two lines first, before any list; copy exactly):
+    VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+    CITATIONS=path:line(-line), path:line(-line), ...
+
+    Task: List up to 10 undocumented public items (visibility=pub) from the structured evidence.
+    Use DOC_SUMMARY counts; do not claim repo-global totals beyond DOC_SUMMARY.
+
+    Output format (exact; ONE line per item; keep each line short):
+    1. <signature-or-name> - <path:line> - undocumented (doc.has_doc=false)
+
+    Rules:
+    - Max 10 items. If fewer exist, list all shown.
+    - Do NOT add prose paragraphs. No sub-bullets.
+    - Always include at least one <path:line> per item (from evidence).
+    - Even if you think evidence is insufficient, still output VERDICT and CITATIONS (first lines already written).
+  chat:
+    retry_on_schema_fail: true
+    schema_retry_attempts: 2
+    strict_response_template: |-
+      VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+      CITATIONS=<comma-separated evidence tokens from CITE= lines only>
+      1. <signature-or-name> - <non-test path:line> - undocumented (doc.has_doc=false) or NONE
+      2. <signature-or-name> - <non-test path:line> - undocumented (doc.has_doc=false) or NONE
+      3. <signature-or-name> - <non-test path:line> - undocumented (doc.has_doc=false) or NONE
+      4. <signature-or-name> - <non-test path:line> - undocumented (doc.has_doc=false) or NONE
+      5. <signature-or-name> - <non-test path:line> - undocumented (doc.has_doc=false) or NONE
+  preflight:
+  - name: doc_analysis
+    cmd:
+    - docs
+    - --format
+    - json
+    transform:
+      render: list
+      max_items: 50
+      max_chars: 16000
+  expected_verdict: TRUE_POSITIVE
+
+- id: R_DOC_MATCH_1
+  title: "Doc\u2194Code Semantic Alignment"
+  category: documentation
+  top_k: 12
+  answer_mode: llm
+  advice_mode: llm
+  question: |-
+    RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+    Verify that documentation comments accurately describe the function/struct signatures.
+
+    The evidence is a numbered list. Each line has the format:
+      N. file:line-range | sig: <signature> | doc: <documentation text> | +entity_id=...
+
+    The "sig:" field is the actual Rust code signature.
+    The "doc:" field is the /// documentation comment attached to it.
+
+    YOUR TASK: For the first 15 items:
+    1. Read the sig: field (this IS the code)
+    2. Read the doc: field (this IS the documentation)
+    3. Compare: Does the doc accurately describe what the signature declares?
+    4. Rate each: ACCURATE / PARTIAL / MISLEADING
+
+    Output format:
+    | File:Line | Signature | Doc Summary | Rating |
+    |-----------|-----------|-------------|--------|
+    | file:line | signature text | brief doc summary | ACCURATE/PARTIAL/MISLEADING |
+
+    IMPORTANT: All required data IS in the evidence above.
+    The sig: and doc: fields are already extracted for you.
+    Do NOT say "NOT FOUND" - read the numbered list items.
+  chat:
+    retry_on_schema_fail: true
+    schema_retry_attempts: 2
+    strict_response_template: |-
+      VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+      CITATIONS=<comma-separated evidence tokens from CITE= lines only>
+      | File:Line | Signature | Doc Summary | Rating |
+      |-----------|-----------|-------------|--------|
+      | <path:line> | <signature text> | <brief doc summary> | ACCURATE|PARTIAL|MISLEADING |
+      | <path:line> | <signature text> | <brief doc summary> | ACCURATE|PARTIAL|MISLEADING |
+  preflight:
+  - name: doc_entities
+    cmd:
+    - docs
+    - --format
+    - json
+    transform:
+      filter_fn: compact_docs
+      render: list
+      max_items: 30
+      max_chars: 10000
+  expected_verdict: TRUE_POSITIVE
+
+- id: R_DOC_GENERATE_1
+  title: Guru Doc Drafts For Top 5 Undocumented Public Items
+  category: documentation
+  top_k: 12
+  answer_mode: llm
+  advice_mode: llm
+  question: |-
+    RESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.
+
+    Generate Rust doc comments for the first 5 undocumented public items in evidence.
+
+    Deterministic target selection policy (must follow exactly):
+    1) visibility=pub
+    2) doc.has_doc=false
+    3) exclude test paths (/tests/, /testdata/, /fixtures/, *_test.rs, test_*.rs)
+    4) sort by path then line_start ascending
+    5) take first 5
+
+    Required output lines after VERDICT/CITATIONS:
+    DOC_TARGET_1=<path:line | signature or NONE>
+    DOC_TEXT_1=<Rust doc comment starting with /// or NONE>
+    DOC_TARGET_2=<path:line | signature or NONE>
+    DOC_TEXT_2=<Rust doc comment starting with /// or NONE>
+    DOC_TARGET_3=<path:line | signature or NONE>
+    DOC_TEXT_3=<Rust doc comment starting with /// or NONE>
+    DOC_TARGET_4=<path:line | signature or NONE>
+    DOC_TEXT_4=<Rust doc comment starting with /// or NONE>
+    DOC_TARGET_5=<path:line | signature or NONE>
+    DOC_TEXT_5=<Rust doc comment starting with /// or NONE>
+
+    Rules:
+    - Each DOC_TEXT should be 1-3 lines of Rustdoc and must match the target signature intent.
+    - Keep docs concise and actionable (purpose, key args/returns, errors where relevant).
+    - If fewer than 5 eligible targets exist, set remaining DOC_TARGET_N and DOC_TEXT_N to NONE.
+    - Do not output markdown or extra prose.
+  chat:
+    retry_on_schema_fail: true
+    schema_retry_attempts: 2
+    strict_response_template: |-
+      VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+      CITATIONS=<comma-separated evidence tokens from CITE= lines only>
+      DOC_TARGET_1=<path:line | signature or NONE>
+      DOC_TEXT_1=</// ... or NONE>
+      DOC_TARGET_2=<path:line | signature or NONE>
+      DOC_TEXT_2=</// ... or NONE>
+      DOC_TARGET_3=<path:line | signature or NONE>
+      DOC_TEXT_3=</// ... or NONE>
+      DOC_TARGET_4=<path:line | signature or NONE>
+      DOC_TEXT_4=</// ... or NONE>
+      DOC_TARGET_5=<path:line | signature or NONE>
+      DOC_TEXT_5=</// ... or NONE>
+  preflight:
+  - name: doc_analysis
+    cmd:
+    - docs
+    - --format
+    - json
+    transform:
+      render: list
+      exclude_test_files: true
+      max_items: 120
+      max_chars: 24000
+  expected_verdict: TRUE_POSITIVE
+
+validation:
+  required_verdicts:
+  - TRUE_POSITIVE
+  - FALSE_POSITIVE
+  - INDETERMINATE
+  citation_format: path:line(-line)
+  fail_on_missing_citations: true
+  enforce_citations_from_evidence: true
+  enforce_no_new_paths: true
+  enforce_paths_must_be_cited: true
+  minimum_questions: 4
+runner:
+  plugin: rsqt_guru
+  plugin_config:
+    rules_path: cfg_rust_audit_rsqt_general_finding_rules.yaml
+    question_validators_path: cfg_rust_audit_rsqt_docs_focus_4q_question_validators.yaml

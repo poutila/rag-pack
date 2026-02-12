@@ -1,0 +1,227 @@
+defaults:
+  test_path_patterns:
+  - '(^|/)(tests)(/|$)'
+  - '(^|/)(testdata|fixtures)(/|$)'
+  - '(^|/)[^/]*_tests?\.rs$'
+  - '(^|/)test_[^/]+\.rs$'
+
+validators:
+  R_MISSION_OPS_1:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)\s*$'
+    min_count: 1
+    message: 'R_MISSION_OPS_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_MISSION_OPS_1: Missing CITATIONS line with path:line token'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*INDEX_REGEN_FULL\s*=\s*(OK|FAIL|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_OPS_1: Missing INDEX_REGEN_FULL line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*INDEX_REGEN_INCREMENTAL\s*=\s*(OK|FAIL|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_OPS_1: Missing INDEX_REGEN_INCREMENTAL line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*STATS_FILE_COUNT\s*=\s*(\d+|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_OPS_1: Missing STATS_FILE_COUNT line'
+
+  R_MISSION_OPS_2:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)\s*$'
+    min_count: 1
+    message: 'R_MISSION_OPS_2: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_MISSION_OPS_2: Missing CITATIONS line with path:line token'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*SCHEMA_REGISTRY_COMMANDS\s*=\s*(\d+|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_OPS_2: Missing SCHEMA_REGISTRY_COMMANDS line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*COLUMNS_COUNT\s*=\s*(\d+|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_OPS_2: Missing COLUMNS_COUNT line'
+
+  R_MISSION_OPS_3:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)\s*$'
+    min_count: 1
+    message: 'R_MISSION_OPS_3: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_MISSION_OPS_3: Missing CITATIONS line with path:line token'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*DUMP_EXECUTED\s*=\s*(YES|NO|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_OPS_3: Missing DUMP_EXECUTED line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*DUMP_JSON_ARRAY\s*=\s*(YES|NO|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_OPS_3: Missing DUMP_JSON_ARRAY line'
+
+  R_MISSION_FIND_1:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)\s*$'
+    min_count: 1
+    message: 'R_MISSION_FIND_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_MISSION_FIND_1: Missing CITATIONS line with path:line token'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*AUDIT_ROWS_TOTAL\s*=\s*(\d+|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_FIND_1: Missing AUDIT_ROWS_TOTAL line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*HIGH_PLUS_ROWS\s*=\s*(\d+|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_FIND_1: Missing HIGH_PLUS_ROWS line'
+
+  R_MISSION_FIND_2:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)\s*$'
+    min_count: 1
+    message: 'R_MISSION_FIND_2: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_MISSION_FIND_2: Missing CITATIONS line with path:line token'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*DOC_FINDINGS_ROWS\s*=\s*(\d+|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_FIND_2: Missing DOC_FINDINGS_ROWS line'
+
+  R_MISSION_CLI_1:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)\s*$'
+    min_count: 1
+    message: 'R_MISSION_CLI_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_MISSION_CLI_1: Missing CITATIONS line with path:line token'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*CLI_REFERENCE_GENERATED\s*=\s*(YES|NO|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_CLI_1: Missing CLI_REFERENCE_GENERATED line'
+
+  R_MISSION_CLI_2:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)\s*$'
+    min_count: 1
+    message: 'R_MISSION_CLI_2: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_MISSION_CLI_2: Missing CITATIONS line with path:line token'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*CLI_HELP_AUDIT_STATUS\s*=\s*(PASS|WARN|FAIL|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_CLI_2: Missing CLI_HELP_AUDIT_STATUS line'
+
+  R_MISSION_SAFE_1:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)\s*$'
+    min_count: 1
+    message: 'R_MISSION_SAFE_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_MISSION_SAFE_1: Missing CITATIONS line with path:line token'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*PROD_UNWRAP_FILES\s*=\s*(\d+|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_SAFE_1: Missing PROD_UNWRAP_FILES line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*PROD_EXPECT_FILES\s*=\s*(\d+|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_SAFE_1: Missing PROD_EXPECT_FILES line'
+
+  R_MISSION_RAG_1:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)\s*$'
+    min_count: 1
+    message: 'R_MISSION_RAG_1: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_MISSION_RAG_1: Missing CITATIONS line with path:line token'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*RAG_INDEX_EXECUTED\s*=\s*(YES|NO|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_RAG_1: Missing RAG_INDEX_EXECUTED line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*CHUNK_STRATEGIES_TESTED\s*=\s*.+$'
+    min_count: 1
+    message: 'R_MISSION_RAG_1: Missing CHUNK_STRATEGIES_TESTED line'
+
+  R_MISSION_RAG_2:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)\s*$'
+    min_count: 1
+    message: 'R_MISSION_RAG_2: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_MISSION_RAG_2: Missing CITATIONS line with path:line token'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*RAG_SEMANTIC_RESULTS\s*=\s*(\d+|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_RAG_2: Missing RAG_SEMANTIC_RESULTS line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*RAG_HYBRID_RESULTS\s*=\s*(\d+|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_RAG_2: Missing RAG_HYBRID_RESULTS line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*RAG_LITERAL_RESULTS\s*=\s*(\d+|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_RAG_2: Missing RAG_LITERAL_RESULTS line'
+
+  R_MISSION_RAG_3:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)\s*$'
+    min_count: 1
+    message: 'R_MISSION_RAG_3: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_MISSION_RAG_3: Missing CITATIONS line with path:line token'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*CHAT_STUB_JSON\s*=\s*(YES|NO|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_RAG_3: Missing CHAT_STUB_JSON line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*CHAT_GROUNDED_PROFILE\s*=\s*(YES|NO|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_RAG_3: Missing CHAT_GROUNDED_PROFILE line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*CHAT_GURU_PROFILE\s*=\s*(YES|NO|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_RAG_3: Missing CHAT_GURU_PROFILE line'
+
+  R_MISSION_OPS_4:
+  - type: require_min_inline_regex_count
+    regex: '(?m)^\s*\*{0,2}VERDICT\*{0,2}\s*[=:]\s*(?:TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE)\s*$'
+    min_count: 1
+    message: 'R_MISSION_OPS_4: Missing/invalid VERDICT line'
+  - type: require_min_inline_regex_count
+    regex: '(?m)\*{0,2}CITATIONS\*{0,2}\s*[=:]\s*\S+:[0-9]+'
+    min_count: 1
+    message: 'R_MISSION_OPS_4: Missing CITATIONS line with path:line token'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*STRICT_JSON_COERCION\s*=\s*(OK|BROKEN|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_OPS_4: Missing STRICT_JSON_COERCION line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*STRICT_JSON_PARSEABLE\s*=\s*(YES|NO|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_OPS_4: Missing STRICT_JSON_PARSEABLE line'
+  - type: require_min_inline_regex_count
+    regex: '(?im)^\s*PROFILE_CI_RESOLVED_PATHS\s*=\s*(YES|NO|INSUFFICIENT)\s*$'
+    min_count: 1
+    message: 'R_MISSION_OPS_4: Missing PROFILE_CI_RESOLVED_PATHS line'

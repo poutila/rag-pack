@@ -1,0 +1,31 @@
+finding_rules:
+  META_BUILD_RS_PRESENT:
+    category: cargo
+    severity: MEDIUM
+    recommendation_code: REC_BUILD_RS
+    recommendation: Review build.rs and build deps; pin versions; CI builds in controlled env
+  SAFE_UNSAFE_PRESENT:
+    category: safety
+    severity: HIGH
+    recommendation_code: REC_UNSAFE
+    recommendation: Require SAFETY comments + tests; consider Miri
+  SAFE_FFI_PRESENT:
+    category: safety
+    severity: HIGH
+    recommendation_code: REC_FFI
+    recommendation: Define ABI invariants, fuzz tests, integration tests
+  SAFE_PROD_UNWRAP_PRESENT:
+    category: safety
+    severity: MEDIUM
+    recommendation_code: REC_PROD_UNWRAP
+    recommendation: Replace recoverable unwrap/expect with Result; keep invariant panics explicit
+  SAFE_PANIC_PRESENT:
+    category: safety
+    severity: MEDIUM
+    recommendation_code: REC_PANIC
+    recommendation: Replace with typed errors or document panic contract
+  CARGO_PROC_MACRO:
+    category: cargo
+    severity: HIGH
+    recommendation_code: REC_PROC_MACRO
+    recommendation: Audit proc-macro crate carefully; supply-chain gate

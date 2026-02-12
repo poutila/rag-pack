@@ -1,0 +1,358 @@
+version: 1.2.0
+pack_type: rust_audit_general
+engine: rsqt
+response_schema: '--- REQUIRED OUTPUT FORMAT ---
+
+  MANDATORY FIRST LINES (must be the first two lines of your response; copy exactly):
+
+  VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE
+
+  CITATIONS=path:line(-line), path:line(-line), ...
+
+
+  After those two lines, write the answer body.
+
+
+  Hard bans:
+
+  - Do NOT output Markdown section headers like "Analysis:" or "CITATIONS:".
+
+  - Do NOT invent line numbers or file paths. Only cite tokens that appear in the evidence (including artifact anchors like *.json:1).
+
+  - Do NOT include VERDICT or CITATIONS anywhere else in the body.
+
+
+  Policy:
+
+  - If a claim cannot be proven from extracted evidence, set VERDICT=INDETERMINATE and say "INSUFFICIENT EVIDENCE" + list what is missing.
+
+  - Prefer deterministic extraction evidence; do NOT speculate.
+
+  '
+defaults:
+  chat_top_k: 12
+  max_tokens: 2000
+  temperature: 0.0
+questions:
+- id: R_ERR_INV_1
+  title: Error Type Inventory (Frameworks + Custom Errors + Error Conversions)
+  category: error_handling
+  top_k: 15
+  advice_mode: llm
+  question: "MANDATORY FIRST LINES (write these two lines first, before any analysis; copy exactly):\nVERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE\nCITATIONS=path:line(-line), path:line(-line), ...\n\nInventory error framework usage and error-type definitions using ONLY evidence.\n\nRequired outputs:\n1) Error framework(s) used: thiserror / anyhow / manual / mixed (cite evidence).\n2) List each custom error type (enum/struct) with file:line.\n3) List From<X> impls that convert error types (NOTE: from_impls evidence is filtered to lines containing \"Error\";\n   do NOT include data conversions like ProfileRecord).\n\nRules:\n- Every claim must be supported by citations from evidence.\n- If evidence is aggregate/file-only, cite the CITE= token verbatim.\n- Do not speculate beyond evidence.\n"
+  preflight:
+  - name: error_type_defs
+    cmd:
+    - search
+    - enum Error
+    - --limit
+    - '30'
+    - --format
+    - json
+  - name: thiserror_derives
+    cmd:
+    - search
+    - thiserror::Error
+    - --limit
+    - '30'
+    - --format
+    - json
+  - name: anyhow_usage
+    cmd:
+    - search
+    - 'anyhow::'
+    - --limit
+    - '30'
+    - --format
+    - json
+  - name: from_impls
+    cmd:
+    - search
+    - impl From<
+    - --limit
+    - '40'
+    - --format
+    - json
+    transform:
+      require_contains: Error
+  - name: prod_unwraps
+    cmd:
+    - prod-unwraps
+    - --format
+    - json
+  - name: map_err_usage
+    cmd:
+    - search
+    - .map_err(
+    - --limit
+    - '30'
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+- id: R_ERR_RISK_1
+  title: Error Propagation Gaps + Production Unwrap Risk (Bounded)
+  category: error_handling
+  top_k: 15
+  advice_mode: llm
+  question: "MANDATORY FIRST LINES (write these TWO lines first, before any analysis; copy exactly):\nVERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE\nCITATIONS=path:line(-line), path:line(-line), ...\n\nNow assess error propagation and production unwrap risk using ONLY evidence.\n\nYOUR TASK (extract from evidence, do NOT invent):\n\n1) Boundary propagation gaps:\n   - Do From<Error> impls appear to bridge engine→cli and engine→gui boundaries?\n   - Is .map_err() used as a compensating pattern? Cite up to 5 examples.\n2) Production unwrap risk:\n   - List up to 5 files with the highest prod_unwraps/prod_expects counts (from prod_unwraps evidence).\n   - For each, classify as likely INVARIANT vs RECOVERABLE (brief justification; cite evidence).\n3) List 0-3 improvements. Each MUST cite a concrete deficiency from evidence (a line showing the problem). If you cannot cite a deficiency, output: NO EVIDENCE-GROUNDED IMPROVEMENTS.\n\nRules:\n- Keep bounded outputs (max 5 items per list).\n\
+    - Do not speculate beyond evidence.\n- CITATIONS must be a single comma-separated line (no bullets, no backticks, no annotations).\n- Prefer real file:line tokens; if only CITE= tokens exist, cite those verbatim.\n- Even if you think evidence is insufficient, still keep the first two lines (already written).\n"
+  preflight:
+  - name: error_type_defs
+    cmd:
+    - search
+    - enum Error
+    - --limit
+    - '30'
+    - --format
+    - json
+  - name: thiserror_derives
+    cmd:
+    - search
+    - thiserror::Error
+    - --limit
+    - '30'
+    - --format
+    - json
+  - name: anyhow_usage
+    cmd:
+    - search
+    - 'anyhow::'
+    - --limit
+    - '30'
+    - --format
+    - json
+  - name: from_impls
+    cmd:
+    - search
+    - impl From<
+    - --limit
+    - '40'
+    - --format
+    - json
+    transform:
+      require_contains: Error
+  - name: prod_unwraps
+    cmd:
+    - prod-unwraps
+    - --format
+    - json
+    render: lines
+    transform:
+      exclude_test_files: true
+  - name: prod_expects
+    cmd:
+    - prod-expects
+    - --format
+    - json
+    render: lines
+    transform:
+      exclude_test_files: true
+  - name: unwrap_sites
+    cmd:
+    - search
+    - .unwrap(
+    - --limit
+    - '200'
+    - --format
+    - json
+    render: lines
+    block_max_chars: 8000
+    transform:
+      exclude_test_files: true
+      exclude_comments: true
+      group_by_path_top_n:
+        from: prod_unwraps
+        top_n: 5
+        per_path: 5
+  - name: expect_sites
+    cmd:
+    - search
+    - .expect(
+    - --limit
+    - '200'
+    - --format
+    - json
+    render: lines
+    block_max_chars: 8000
+    transform:
+      exclude_test_files: true
+      exclude_comments: true
+      group_by_path_top_n:
+        from: prod_expects
+        top_n: 5
+        per_path: 5
+  - name: map_err_usage
+    cmd:
+    - search
+    - .map_err(
+    - --limit
+    - '80'
+    - --format
+    - json
+    render: lines
+    transform:
+      exclude_test_files: true
+      exclude_comments: true
+      max_items: 20
+  expected_verdict: TRUE_POSITIVE
+- id: R_DEPS_1
+  title: Dependency Supply Chain Inventory
+  category: cargo
+  top_k: 12
+  advice_mode: llm
+  question: "Assess dependency management and supply chain hygiene.\nRESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.\nCITATION RULE: Every claim MUST include file:line citations from the evidence.\nThe evidence below is organized as: A) dep_sections: Full Cargo.toml content with [dependencies] sections B) git_dep_hits: Dependencies using git = \"...\" source C) path_dep_hits: Dependencies using path = \"...\" source D) exact_version_hits: Dependencies with exact pinning (\"=X.Y.Z\") E) workspace_dep_hits: Dependencies using workspace = true F) msrv_hits: rust-version / MSRV declarations G) cargo_lock: Cargo.lock presence\nYOUR TASK (extract from evidence, do NOT invent):\n1. DEPENDENCY OVERVIEW:\n   - How many Cargo.toml files? List each with file_path:line_start from dep_sections.\n   - For each: count [dependencies] vs [dev-dependencies] vs [build-dependencies].\n   - Are workspace dependencies used for version consistency?\n\n2. SOURCE\
+    \ RISK:\n   - Any git-source dependencies? Cite each with file:line from git_dep_hits.\n   - Any path-source dependencies? Cite each with file:line from path_dep_hits.\n   - Only if BOTH git_dep_hits and path_dep_hits are empty, state: \"Clean: all registry-sourced.\"\n\n3. VERSION MANAGEMENT GAPS:\n   - Any exact-pinned (=X.Y.Z)? Cite from exact_version_hits.\n   - Is Cargo.lock committed? Cite from cargo_lock.\n   - Is MSRV declared? Cite from msrv_hits or state \"not declared.\"\n\n4. SUPPLY CHAIN HYGIENE RATING:\n   - List 0–3 evidence-grounded recommendations. Each MUST cite a deficiency (file:line). If none, output \"NO EVIDENCE-GROUNDED RECOMMENDATIONS\".\n   - Note: For CVE scanning, recommend `cargo audit` (not available via rsqt).\n"
+  preflight:
+  - name: dep_sections
+    cmd:
+    - query
+    - --file
+    - Cargo.toml
+    - --contains
+    - '[dependencies]'
+    - --include-all-files
+    - --columns
+    - file_path
+    - line_start
+    - line_end
+    - source_text
+    - --limit
+    - '200'
+    - --format
+    - json
+  - name: git_dep_hits
+    cmd:
+    - search
+    - git = "
+    - --include-all-files
+    - --limit
+    - '60'
+    - --format
+    - json
+  - name: path_dep_hits
+    cmd:
+    - search
+    - '{ path = "'
+    - --include-all-files
+    - --limit
+    - '80'
+    - --format
+    - json
+  - name: exact_version_hits
+    cmd:
+    - search
+    - = "=
+    - --include-all-files
+    - --limit
+    - '60'
+    - --format
+    - json
+  - name: workspace_dep_hits
+    cmd:
+    - search
+    - workspace = true
+    - --include-all-files
+    - --limit
+    - '80'
+    - --format
+    - json
+  - name: msrv_hits
+    cmd:
+    - search
+    - rust-version
+    - --include-all-files
+    - --limit
+    - '20'
+    - --format
+    - json
+  - name: cargo_lock
+    cmd:
+    - query
+    - --file
+    - Cargo.lock
+    - --include-all-files
+    - --columns
+    - file_path
+    - total_lines
+    - --limit
+    - '5'
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+- id: R_OWN_1
+  title: Ownership and Cloning Pattern Inventory
+  category: performance
+  top_k: 15
+  advice_mode: llm
+  question: "Assess ownership patterns and borrowing efficiency.\nRESPONSE FORMAT: You MUST start with VERDICT= and CITATIONS= as specified in the pack RESPONSE FORMAT.\nCITATION RULE: Every claim MUST include file:line citations from the evidence. If a category has 0 results, state that explicitly. Do NOT invent results.\nThe evidence is organized as: A) clone_hits: .clone() call sites B) arc_mutex_hits: Arc<Mutex<T>> usage sites C) arc_rwlock_hits: Arc<RwLock<T>> usage sites D) rc_hits: Rc<T> usage sites E) pub_fn_signatures: Public function signatures F) box_dyn_hits: Box<dyn Trait> usage sites\nYOUR TASK (extract from evidence, do NOT invent):\n1. CLONE PATTERN ANALYSIS:\n   - Total .clone() count from clone_hits. List top 5 call sites with file:line.\n   - Classify dominant pattern:\n     STRUCTURAL (moving data into structs) vs\n     DEFENSIVE (avoiding borrow checker) vs\n     STRING (String::clone for owned strings).\n   - Are any clones clearly avoidable?\n\n2. SHARED-STATE ARCHITECTURE:\n\
+    \   - From arc_mutex_hits: list sites or state \"No Arc<Mutex<T>> detected.\"\n   - From arc_rwlock_hits: list sites or state \"No Arc<RwLock<T>> detected.\"\n   - From rc_hits: list sites or state \"No Rc<T> detected.\"\n   - If NONE: the codebase uses single-ownership only.\n\n3. PUBLIC API BORROWING EFFICIENCY:\n   - From pub_fn_signatures: list pub fn taking String where &str would suffice, with file:line.\n   - From pub_fn_signatures: list pub fn taking Vec<T> where &[T] would suffice, with file:line.\n\n4. OVERALL ASSESSMENT:\n   - List 0–3 concrete, evidence-grounded improvements with file:line references. If none, output \"NO EVIDENCE-GROUNDED IMPROVEMENTS\".\n"
+  preflight:
+  - name: clone_hits
+    cmd:
+    - search
+    - .clone()
+    - --limit
+    - '80'
+    - --format
+    - json
+  - name: arc_mutex_hits
+    cmd:
+    - search
+    - Arc<Mutex
+    - --limit
+    - '30'
+    - --format
+    - json
+  - name: arc_rwlock_hits
+    cmd:
+    - search
+    - Arc<RwLock
+    - --limit
+    - '30'
+    - --format
+    - json
+  - name: rc_hits
+    cmd:
+    - search
+    - Rc<
+    - --limit
+    - '30'
+    - --format
+    - json
+    transform:
+      require_regex: (?<![A-Za-z0-9_])Rc\s*<
+      exclude_test_files: true
+      exclude_comments: true
+  - name: pub_fn_signatures
+    cmd:
+    - search
+    - 'pub fn '
+    - --limit
+    - '60'
+    - --format
+    - json
+  - name: box_dyn_hits
+    cmd:
+    - search
+    - 'Box<dyn '
+    - --limit
+    - '30'
+    - --format
+    - json
+  expected_verdict: TRUE_POSITIVE
+validation:
+  required_verdicts:
+  - TRUE_POSITIVE
+  - FALSE_POSITIVE
+  - INDETERMINATE
+  citation_format: path:line(-line)
+  fail_on_missing_citations: true
+  enforce_citations_from_evidence: true
+  enforce_no_new_paths: true
+  enforce_paths_must_be_cited: true
+  minimum_questions: 4
+runner:
+  plugin: rsqt_guru
+  plugin_config:
+    rules_path: cfg_rust_audit_rsqt_extension_3q_finding_rules.yaml
+    question_validators_path: cfg_rust_audit_rsqt_extension_3q_question_validators.yaml

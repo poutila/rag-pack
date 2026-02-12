@@ -4898,6 +4898,11 @@ def _run_single(
         analyze_prompt=str(prompt_analyze) if prompt_analyze else "(none)",
     )
 
+    # Resolve mission/validator modes before any config loading that depends on them.
+    is_mission_pack, mission_source = _resolve_is_mission_pack(pack=pack, pack_path=pack_path)
+    mission_advice_gate_enabled = is_mission_pack
+    qv_enabled, qv_source = _resolve_apply_question_validators(pack=pack, is_mission_pack=is_mission_pack)
+
     # SSOT: load default test-path patterns once per run from validator YAML
     default_test_path_patterns = _load_default_test_path_patterns(pack, pack_path)
     question_validators_cfg = (

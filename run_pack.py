@@ -4968,6 +4968,9 @@ def _run_single(
 
     fatal_contract_issues: List[str] = []
     fatal_advice_gate_issues: List[str] = []
+    is_mission_pack, mission_source = _resolve_is_mission_pack(pack=pack, pack_path=pack_path)
+    mission_advice_gate_enabled = is_mission_pack
+    qv_enabled, qv_source = _resolve_apply_question_validators(pack=pack, is_mission_pack=is_mission_pack)
     report_lines.append(f"mission_advice_gate_enabled={mission_advice_gate_enabled}\n")
     report_lines.append(f"is_mission_pack={is_mission_pack} source={mission_source}\n")
     report_lines.append(f"apply_question_validators={qv_enabled} source={qv_source}\n")

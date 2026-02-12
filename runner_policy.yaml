@@ -106,15 +106,20 @@ runner:
     preflight_max_chars: 1600
   path_aliases:
     rust_audit_pack_general_v1_6.explicit.yaml: "pack_rust_audit_rsqt_general_v1_6_explicit.yaml"
-    rust_audit_extension_3q.yaml: "pack_rust_audit_rsqt_extension_3q.yaml"
+    # legacy aliases (kept for backward compatibility)
+    rust_audit_extension_3q.yaml: "pack_rust_audit_rsqt_extension_4q.yaml"
+    rust_audit_extension_4q.yaml: "pack_rust_audit_rsqt_extension_4q.yaml"
     rust_audit_rsqt_mission_addon_part1.yaml: "pack_rust_audit_rsqt_mission_addon_part1_v1_0.yaml"
     rust_audit_rsqt_mission_addon_part2.yaml: "pack_rust_audit_rsqt_mission_addon_part2_v1_0.yaml"
     rust_audit_raqt.yaml: "pack_rust_audit_raqt.yaml"
     rust_audit_raqt_mission.yaml: "pack_rust_audit_raqt_mission_v1_0.yaml"
     rsqt_question_validators.yaml: "cfg_rust_audit_rsqt_general_question_validators.yaml"
     rsqt_finding_rules.yaml: "cfg_rust_audit_rsqt_general_finding_rules.yaml"
-    rsqt_question_validators_ext3q.yaml: "cfg_rust_audit_rsqt_extension_3q_question_validators.yaml"
-    rsqt_finding_rules_ext3q.yaml: "cfg_rust_audit_rsqt_extension_3q_finding_rules.yaml"
+    rsqt_question_validators_ext3q.yaml: "cfg_rust_audit_rsqt_extension_4q_question_validators.yaml"
+    rsqt_finding_rules_ext3q.yaml: "cfg_rust_audit_rsqt_extension_4q_finding_rules.yaml"
+    # new canonical names
+    rsqt_question_validators_ext4q.yaml: "cfg_rust_audit_rsqt_extension_4q_question_validators.yaml"
+    rsqt_finding_rules_ext4q.yaml: "cfg_rust_audit_rsqt_extension_4q_finding_rules.yaml"
     rsqt_question_validators_raqt.yaml: "cfg_rust_audit_raqt_question_validators.yaml"
     rsqt_finding_rules_raqt.yaml: "cfg_rust_audit_raqt_finding_rules.yaml"
     rsqt_question_validators_raqt_mission.yaml: "cfg_rust_audit_raqt_mission_question_validators.yaml"
@@ -142,6 +147,7 @@ pack_validation:
   enforce_no_new_paths: true
   enforce_paths_must_be_cited: true
   minimum_questions: 0
+  apply_question_validators: false
 
 question_modes:
   answer: ["llm", "deterministic"]

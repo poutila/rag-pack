@@ -43,7 +43,7 @@ Many show 0 issues, but the same failure modes recur in the “bad” ones (espe
 
 The three biggest systemic problems I see
 1) Corpus pollution + post-filtering to zero (audit_runs dominating results)
-In multiple RSQT runs, preflights find plenty of hits — but almost all are from XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/... and then your exclude regex drops them to zero rows.
+In multiple RSQT runs, preflights find plenty of hits — but almost all are from audit_runs/... and then your exclude regex drops them to zero rows.
 
 Concrete example (RSQT general, R_API_3 pub use):
 

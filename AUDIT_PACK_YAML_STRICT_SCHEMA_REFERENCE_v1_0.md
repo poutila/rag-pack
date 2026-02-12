@@ -11,8 +11,8 @@ generated: 2026-02-10T17:41:52Z
 
 This document is the strict schema reference for YAML used by:
 
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/plugins/rsqt_guru.py`
+- `run_pack.py`
+- `plugins/rsqt_guru.py`
 
 It focuses on structure, allowed keys, and fail conditions.
 
@@ -28,7 +28,7 @@ It focuses on structure, allowed keys, and fail conditions.
 ### Pack files
 
 - `pack_rust_audit_rsqt_general_v1_6_explicit.yaml`
-- `pack_rust_audit_rsqt_extension_3q.yaml`
+- `pack_rust_audit_rsqt_extension_4q.yaml`
 - `pack_rust_audit_raqt.yaml`
 - `docs_audit_pack.explicit.yaml`
 
@@ -36,8 +36,8 @@ It focuses on structure, allowed keys, and fail conditions.
 
 - `cfg_rust_audit_rsqt_general_question_validators.yaml`
 - `cfg_rust_audit_rsqt_general_finding_rules.yaml`
-- `cfg_rust_audit_rsqt_extension_3q_question_validators.yaml`
-- `cfg_rust_audit_rsqt_extension_3q_finding_rules.yaml`
+- `cfg_rust_audit_rsqt_extension_4q_question_validators.yaml`
+- `cfg_rust_audit_rsqt_extension_4q_finding_rules.yaml`
 - `cfg_rust_audit_raqt_question_validators.yaml`
 - `cfg_rust_audit_raqt_finding_rules.yaml`
 

@@ -11,8 +11,8 @@ RAQT Auditability and Usability Enhancements (Post-Correctness Hardening)
 
 ## Context
 This request is based on empirical findings from:
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_TOOL_REPORT.md`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_BUG_REPORTS.md`
+- `RAQT_TOOL_REPORT.md`
+- `RAQT_BUG_REPORTS.md`
 
 Priority note: correctness defects (especially `refs` reliability) should be fixed first. The items below are feature gaps that remain important for production-grade Rust auditing.
 
@@ -130,6 +130,6 @@ Acceptance criteria:
 4. Add workspace-aware fixture guidance/mode and update docs.
 
 ## Related Artifacts
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_TOOL_REPORT.md`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_BUG_REPORTS.md`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit/logs/`
+- `RAQT_TOOL_REPORT.md`
+- `RAQT_BUG_REPORTS.md`
+- `audit_runs/raqt_tool_audit/logs/`

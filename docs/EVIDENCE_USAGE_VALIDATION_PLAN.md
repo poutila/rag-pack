@@ -10,10 +10,10 @@ When to read this: Before changing preflight schemas, evidence transforms, promp
 
 This plan is grounded in:
 
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/runner_policy.yaml`
-- `XREF_WORKFLOW_II_new/xref_state/*` run artifacts and logs
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/*` tool audit outputs
+- `run_pack.py`
+- `runner_policy.yaml`
+- `out/*` run artifacts and logs
+- `audit_runs/*` tool audit outputs
 
 Current code checkpoints:
 
@@ -26,9 +26,9 @@ Current code checkpoints:
 
 Observed evidence from recent runs:
 
-- `question.evidence.summary` appears for mission packs with non-zero evidence blocks in multiple runs, e.g. `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_15_strand_opt/RUN_LOG.txt`.
-- `preflight.step.filtered_to_zero` appears repeatedly for `R_MISSION_SAFETY_1` / `panic_inventory`, e.g. `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_15_strand_opt/RUN_LOG.txt`.
-- There are historical answers with `INSUFFICIENT EVIDENCE` despite successful preflights and injected prompt sections, e.g. `XREF_WORKFLOW_II_new/xref_state/general_v1_6_16/REPORT.md`, `XREF_WORKFLOW_II_new/xref_state/general_v1_6_16/R_API_2_augmented_prompt.md`.
+- `question.evidence.summary` appears for mission packs with non-zero evidence blocks in multiple runs, e.g. `out/RAQT_MISSION_15_strand_opt/RUN_LOG.txt`.
+- `preflight.step.filtered_to_zero` appears repeatedly for `R_MISSION_SAFETY_1` / `panic_inventory`, e.g. `out/RAQT_MISSION_15_strand_opt/RUN_LOG.txt`.
+- There are historical answers with `INSUFFICIENT EVIDENCE` despite successful preflights and injected prompt sections, e.g. `out/general_v1_6_16/REPORT.md`, `out/general_v1_6_16/R_API_2_augmented_prompt.md`.
 
 ## Validation Questions
 
@@ -54,8 +54,8 @@ Goal: prove row extraction is robust to RSQT/RAQT schema variants.
 Tasks:
 
 1. Build a fixture corpus from real artifacts in:
-   - `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs`
-   - `XREF_WORKFLOW_II_new/xref_state/*/*_*.json`
+   - `audit_runs`
+   - `out/*/*_*.json`
 2. For each fixture, replay parsing logic used by `_iter_rows` and path/line/snippet extraction aliases from `runner_policy.yaml`.
 3. Emit a matrix: `artifact -> extracted_rows -> rows_with_path -> rows_with_line`.
 4. Flag any artifact with expected hits but zero extracted rows.
@@ -146,20 +146,20 @@ Acceptance criteria:
 Evidence summary and zero-filter warnings:
 
 ```bash
-uv run mdparse search "question.evidence.summary" XREF_WORKFLOW_II_new/xref_state --limit 200
-uv run mdparse search "preflight.step.filtered_to_zero" XREF_WORKFLOW_II_new/xref_state --limit 200
+uv run mdparse search "question.evidence.summary" out --limit 200
+uv run mdparse search "preflight.step.filtered_to_zero" out --limit 200
 ```
 
 Prompt contains specific preflight section:
 
 ```bash
-rg -n "\\[Preflight pub_fn_hits\\]|CITE=" XREF_WORKFLOW_II_new/xref_state/general_v1_6_16/R_API_2_augmented_prompt.md
+rg -n "\\[Preflight pub_fn_hits\\]|CITE=" out/general_v1_6_16/R_API_2_augmented_prompt.md
 ```
 
 Report says insufficient while preflights succeeded:
 
 ```bash
-rg -n "R_API_2|INSUFFICIENT EVIDENCE|Preflight .*: rc=0" XREF_WORKFLOW_II_new/xref_state/general_v1_6_16/REPORT.md
+rg -n "R_API_2|INSUFFICIENT EVIDENCE|Preflight .*: rc=0" out/general_v1_6_16/REPORT.md
 ```
 
 ## Proposed Implementation Order (Pragmatic)

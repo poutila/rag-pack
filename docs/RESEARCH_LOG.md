@@ -11,9 +11,9 @@ Read before changing defaults, prompts, or chunking strategy.
 
 ## Scope and sources
 This summary is grounded in:
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING.md`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING_MANUAL_RSQT_MDPARSE_v1_0.md`
-- runtime controls in `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`
+- `RAG_TUNING.md`
+- `RAG_TUNING_MANUAL_RSQT_MDPARSE_v1_0.md`
+- runtime controls in `run_pack.py`
 
 ## Key outcomes adopted
 
@@ -26,7 +26,7 @@ This summary is grounded in:
 | Validation posture | fail-closed schema/citation/path checks | Makes quality measurable and auditable |
 
 ## Recent optimization timeline (2026-02-11)
-This timeline captures what changed, why, and what it achieved. Source of record: `XREF_WORKFLOW_II_new/tools/rag_packs/OPTIMIZATION.md`.
+This timeline captures what changed, why, and what it achieved. Source of record: `OPTIMIZATION.md`.
 
 | ID | Change | Why | Evidence |
 |---|---|---|---|
@@ -36,7 +36,7 @@ This timeline captures what changed, why, and what it achieved. Source of record
 | OPT-0008 | Logging enrichment for filter diagnostics | prior logs lacked filter-source and dropped-path diagnostics | `run_pack.py:1868`, `run_pack.py:3085`, `OPTIMIZATION.md:256` |
 
 Concrete code excerpt for OPT-0007:
-`XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2027`
+`run_pack.py:2027`
 ```python
 # If a step explicitly sets exclude_path_regex (even to an empty list),
 # honor that value and do not fall back to runner defaults.
@@ -47,7 +47,7 @@ else:
 ```
 
 Concrete code excerpt for OPT-0008:
-`XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:3085`
+`run_pack.py:3085`
 ```python
 _log_event(logging.INFO, "preflight.step.filtered", ...)
 if _raw_count > 0 and _new_count == 0:
@@ -78,10 +78,10 @@ This maps directly to the framework pipeline:
 Recent observed failure mode from a real run (`RAQT_MISSION_13_strand_opt`):
 - heavy row collapse in filtered preflights despite successful command execution.
 - example: `rows_before=221 | rows_after=0` for `R_PORTS_1_raqt_trait_impls`.
-- source: `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:67`.
+- source: `out/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:67`.
 
 Concrete run excerpt:
-`XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:66`
+`out/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:66`
 ```text
 event=preflight.step.filtered ... qid=R_PORTS_1 | step=raqt_traits | rows_before=18 | rows_after=0
 event=preflight.step.filtered ... qid=R_PORTS_1 | step=raqt_trait_impls | rows_before=221 | rows_after=0
@@ -109,13 +109,13 @@ These are tracked as tool-level issues/feature requests, not runner regressions.
 | Pure generation without validation gates | rejected | cannot guarantee auditable contract compliance |
 
 ## What we achieved vs what remains
-From `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_13_strand_opt`:
+From `out/RAQT_MISSION_13_strand_opt`:
 - runner contract pass: `8/8` (`RUN_MANIFEST.json:35-37`)
 - guru-level pass: `6/8` (`RUN_MANIFEST.json:49-52`)
 - failing mission questions: `R_PORTS_1`, `R_MISSION_SAFETY_1` (`GURU_METRICS.json:5`)
 
 Concrete metrics excerpt:
-`XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_13_strand_opt/GURU_METRICS.json:1`
+`out/RAQT_MISSION_13_strand_opt/GURU_METRICS.json:1`
 ```json
 {
   "guru_score": 6,
@@ -158,36 +158,36 @@ This aligns with the runner's replicate/stability outputs and helps separate one
 - Runner operations: [RUNNER_GUIDE.md](RUNNER_GUIDE.md)
 
 ## Source anchors
-- `XREF_WORKFLOW_II_new/tools/rag_packs/OPTIMIZATION.md:166`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/OPTIMIZATION.md:206`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/OPTIMIZATION.md:231`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/OPTIMIZATION.md:256`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:1868`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2027`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:3085`
-- `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_13_strand_opt/RUN_MANIFEST.json:35`
-- `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_13_strand_opt/GURU_METRICS.json:1`
-- `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:66`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING.md:39`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING.md:45`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING.md:184`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING.md:288`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING.md:313`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING.md:319`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING.md:359`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING.md:395`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING.md:629`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING_MANUAL_RSQT_MDPARSE_v1_0.md:29`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING_MANUAL_RSQT_MDPARSE_v1_0.md:47`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING_MANUAL_RSQT_MDPARSE_v1_0.md:62`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING_MANUAL_RSQT_MDPARSE_v1_0.md:79`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING_MANUAL_RSQT_MDPARSE_v1_0.md:166`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING_MANUAL_RSQT_MDPARSE_v1_0.md:186`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2460`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2664`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_TOOL_REPORT.md:3`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_TOOL_REPORT.md:191`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_TOOL_REPORT.md:208`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/rsqt_tool_audit/RSQT_TOOL_REPORT.md:3`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/rsqt_tool_audit/RSQT_TOOL_REPORT.md:224`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/rsqt_tool_audit/RSQT_TOOL_REPORT.md:236`
+- `OPTIMIZATION.md:166`
+- `OPTIMIZATION.md:206`
+- `OPTIMIZATION.md:231`
+- `OPTIMIZATION.md:256`
+- `run_pack.py:1868`
+- `run_pack.py:2027`
+- `run_pack.py:3085`
+- `out/RAQT_MISSION_13_strand_opt/RUN_MANIFEST.json:35`
+- `out/RAQT_MISSION_13_strand_opt/GURU_METRICS.json:1`
+- `out/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:66`
+- `RAG_TUNING.md:39`
+- `RAG_TUNING.md:45`
+- `RAG_TUNING.md:184`
+- `RAG_TUNING.md:288`
+- `RAG_TUNING.md:313`
+- `RAG_TUNING.md:319`
+- `RAG_TUNING.md:359`
+- `RAG_TUNING.md:395`
+- `RAG_TUNING.md:629`
+- `RAG_TUNING_MANUAL_RSQT_MDPARSE_v1_0.md:29`
+- `RAG_TUNING_MANUAL_RSQT_MDPARSE_v1_0.md:47`
+- `RAG_TUNING_MANUAL_RSQT_MDPARSE_v1_0.md:62`
+- `RAG_TUNING_MANUAL_RSQT_MDPARSE_v1_0.md:79`
+- `RAG_TUNING_MANUAL_RSQT_MDPARSE_v1_0.md:166`
+- `RAG_TUNING_MANUAL_RSQT_MDPARSE_v1_0.md:186`
+- `run_pack.py:2460`
+- `run_pack.py:2664`
+- `RAQT_TOOL_REPORT.md:3`
+- `RAQT_TOOL_REPORT.md:191`
+- `RAQT_TOOL_REPORT.md:208`
+- `audit_runs/rsqt_tool_audit/RSQT_TOOL_REPORT.md:3`
+- `audit_runs/rsqt_tool_audit/RSQT_TOOL_REPORT.md:224`
+- `audit_runs/rsqt_tool_audit/RSQT_TOOL_REPORT.md:236`

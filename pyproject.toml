@@ -1,0 +1,10 @@
+[project]
+name = "rag-pack"
+version = "0.1.0"
+description = "Fail-Closed Deterministic Corrective RAG runner + audit packs"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["PyYAML==6.0.2"]
+
+[project.scripts]
+rag-pack = "run_pack:main"

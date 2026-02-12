@@ -4,7 +4,7 @@
 
 
 ## Source
-- Request: `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_FEATURE_REQUEST_v1_2.md`
+- Request: `RAQT_FEATURE_REQUEST_v1_2.md`
 - Baseline code: `/mnt/data/Dropbox/python/omat/doxslock`
 
 ## Effort scale

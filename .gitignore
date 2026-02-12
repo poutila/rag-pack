@@ -35,3 +35,6 @@ __pycache__/
 *.parquet
 **/*.zip*
 # === END FDP/Analysis Artifacts ===
+
+*.parquet.lock
+/out/

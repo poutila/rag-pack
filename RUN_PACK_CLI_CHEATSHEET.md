@@ -7,88 +7,88 @@
 
 ### Help
 ```bash
-uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py --help
+uv run python run_pack.py --help
 ```
 
 ### RSQT pack run
 ```bash
-uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py \
-  --pack XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_rsqt_general_v1_6_explicit.yaml \
+uv run python run_pack.py \
+  --pack pack_rust_audit_rsqt_general_v1_6_explicit.yaml \
   --parquet RSQT.parquet \
   --index .rsqt.faiss \
-  --out-dir XREF_WORKFLOW_II_new/xref_state/RSQT_run
+  --out-dir out/RSQT_run
 ```
 
 ### RAQT pack run
 ```bash
-uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py \
-  --pack XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt.yaml \
+uv run python run_pack.py \
+  --pack pack_rust_audit_raqt.yaml \
   --parquet RAQT.parquet \
   --index .raqt.faiss \
-  --out-dir XREF_WORKFLOW_II_new/xref_state/RAQT_run
+  --out-dir out/RAQT_run
 ```
 
 ### Force standard mode (no quote-bypass)
 ```bash
-uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py \
-  --pack XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt.yaml \
+uv run python run_pack.py \
+  --pack pack_rust_audit_raqt.yaml \
   --parquet RAQT.parquet \
   --index .raqt.faiss \
-  --out-dir XREF_WORKFLOW_II_new/xref_state/RAQT_std \
+  --out-dir out/RAQT_std \
   --quote-bypass-mode off
 ```
 
 ### Force quote-bypass mode
 ```bash
-uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py \
-  --pack XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt.yaml \
+uv run python run_pack.py \
+  --pack pack_rust_audit_raqt.yaml \
   --parquet RAQT.parquet \
   --index .raqt.faiss \
-  --out-dir XREF_WORKFLOW_II_new/xref_state/RAQT_qb \
+  --out-dir out/RAQT_qb \
   --quote-bypass-mode on
 ```
 
 ### Replicates (stability)
 ```bash
-uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py \
-  --pack XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_rsqt_general_v1_6_explicit.yaml \
+uv run python run_pack.py \
+  --pack pack_rust_audit_rsqt_general_v1_6_explicit.yaml \
   --parquet RSQT.parquet \
   --index .rsqt.faiss \
-  --out-dir XREF_WORKFLOW_II_new/xref_state/RSQT_replicates \
+  --out-dir out/RSQT_replicates \
   --replicate \
   --replicate-seeds 42,123,456
 ```
 
 ### Faster reruns with cached preflights
 ```bash
-uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py \
-  --pack XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt.yaml \
+uv run python run_pack.py \
+  --pack pack_rust_audit_raqt.yaml \
   --parquet RAQT.parquet \
   --index .raqt.faiss \
-  --out-dir XREF_WORKFLOW_II_new/xref_state/RAQT_cached \
+  --out-dir out/RAQT_cached \
   --cache-preflights \
   --short-circuit-preflights
 ```
 
 ### Adaptive top-k retry
 ```bash
-uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py \
-  --pack XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt.yaml \
+uv run python run_pack.py \
+  --pack pack_rust_audit_raqt.yaml \
   --parquet RAQT.parquet \
   --index .raqt.faiss \
-  --out-dir XREF_WORKFLOW_II_new/xref_state/RAQT_adaptive \
+  --out-dir out/RAQT_adaptive \
   --adaptive-top-k \
   --chat-top-k-initial 8
 ```
 
 ### Use custom runner policy
 ```bash
-RUNNER_POLICY_PATH=XREF_WORKFLOW_II_new/tools/rag_packs/runner_policy.yaml \
-uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py \
-  --pack XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt.yaml \
+RUNNER_POLICY_PATH=runner_policy.yaml \
+uv run python run_pack.py \
+  --pack pack_rust_audit_raqt.yaml \
   --parquet RAQT.parquet \
   --index .raqt.faiss \
-  --out-dir XREF_WORKFLOW_II_new/xref_state/RAQT_policy
+  --out-dir out/RAQT_policy
 ```
 
 ---
@@ -99,49 +99,49 @@ uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py \
 Use `uv run python ...` (not plain `python`).
 
 ```bash
-uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py --help
+uv run python run_pack.py --help
 ```
 
 ### `Missing required path: ...`
 Pass explicit paths for pack/parquet/index/engine-specs.
 
 ```bash
-uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py \
-  --pack XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt.yaml \
+uv run python run_pack.py \
+  --pack pack_rust_audit_raqt.yaml \
   --parquet RAQT.parquet \
   --index .raqt.faiss \
-  --engine-specs XREF_WORKFLOW_II_new/tools/rag_packs/engine_specs.yaml \
-  --out-dir XREF_WORKFLOW_II_new/xref_state/RAQT_fix_paths
+  --engine-specs engine_specs.yaml \
+  --out-dir out/RAQT_fix_paths
 ```
 
 ### `Engine '...' not found in engine specs`
 Set pack `engine:` to one that exists in `engine_specs.yaml` (`rsqt`, `raqt`, `mdparse`) or pass correct specs file.
 
 ```bash
-uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py \
-  --engine-specs XREF_WORKFLOW_II_new/tools/rag_packs/engine_specs.yaml \
-  --pack XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt.yaml \
+uv run python run_pack.py \
+  --engine-specs engine_specs.yaml \
+  --pack pack_rust_audit_raqt.yaml \
   --parquet RAQT.parquet \
   --index .raqt.faiss \
-  --out-dir XREF_WORKFLOW_II_new/xref_state/RAQT_fix_engine
+  --out-dir out/RAQT_fix_engine
 ```
 
 ### Contract failure exit code `2` (VERDICT/CITATIONS issues)
 Inspect validator issues in report and question chat artifact:
 
 ```bash
-cat XREF_WORKFLOW_II_new/xref_state/RAQT_run/REPORT.md
-cat XREF_WORKFLOW_II_new/xref_state/RAQT_run/R_BOUNDARY_1_chat.json
+cat out/RAQT_run/REPORT.md
+cat out/RAQT_run/R_BOUNDARY_1_chat.json
 ```
 
 Then rerun with stronger evidence behavior:
 
 ```bash
-uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py \
-  --pack XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt.yaml \
+uv run python run_pack.py \
+  --pack pack_rust_audit_raqt.yaml \
   --parquet RAQT.parquet \
   --index .raqt.faiss \
-  --out-dir XREF_WORKFLOW_II_new/xref_state/RAQT_fix_contract \
+  --out-dir out/RAQT_fix_contract \
   --quote-bypass-mode on \
   --adaptive-top-k
 ```
@@ -153,8 +153,8 @@ Symptoms in `RUN_LOG.txt`:
 
 Quick checks:
 ```bash
-rg -n "question.advice.validator|fatal_advice_gate_issues" XREF_WORKFLOW_II_new/xref_state/<RUN_DIR>/RUN_LOG.txt
-rg -n "Advice quality|Validator issues" XREF_WORKFLOW_II_new/xref_state/<RUN_DIR>/REPORT.md
+rg -n "question.advice.validator|fatal_advice_gate_issues" out/<RUN_DIR>/RUN_LOG.txt
+rg -n "Advice quality|Validator issues" out/<RUN_DIR>/REPORT.md
 ```
 
 Common fixes:
@@ -171,7 +171,7 @@ Symptoms in `RUN_LOG.txt`:
 Fix preflight evidence first:
 
 ```bash
-rg -n "question.evidence.empty.fail_fast|run.abort.empty_evidence" XREF_WORKFLOW_II_new/xref_state/<RUN_DIR>/RUN_LOG.txt
+rg -n "question.evidence.empty.fail_fast|run.abort.empty_evidence" out/<RUN_DIR>/RUN_LOG.txt
 ```
 
 If you intentionally need non-strict experimentation, relax policy:
@@ -186,7 +186,7 @@ runner:
 Use current file names in `tools/rag_packs`:
 
 - `pack_rust_audit_raqt.yaml`
-- `pack_rust_audit_rsqt_extension_3q.yaml`
+- `pack_rust_audit_rsqt_extension_4q.yaml`
 - `pack_rust_audit_rsqt_general_v1_6_explicit.yaml`
 - `cfg_rust_audit_*_question_validators.yaml`
 - `cfg_rust_audit_*_finding_rules.yaml`

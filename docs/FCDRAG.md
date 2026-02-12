@@ -21,7 +21,7 @@ Read this first if someone asks "What is FCDRAG?" then continue with [ARCHITECTU
 | `RAG` | Retrieval-Augmented Generation | Engine retrieval + augmented prompts + generation |
 
 Concrete code excerpt:
-`XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:3800`
+`run_pack.py:3800`
 ```python
 if fatal_contract_issues and pack.validation.fail_on_missing_citations:
     raise SystemExit(2)
@@ -48,7 +48,7 @@ It is not plain "single-shot retrieve+generate". It is an orchestrated multi-sta
 7. Emit auditable artifacts (`REPORT.md`, `RUN_MANIFEST.json`, per-question files, plugin metrics).
 
 Concrete evidence of this sequence:
-`XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:3`
+`out/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:3`
 ```text
 event=run.start ...
 event=run.prompts.selected ...
@@ -86,14 +86,14 @@ What is `UNKNOWN/NOT FOUND` from repo evidence:
 ## Challenges encountered
 ### 1) Evidence collapse due transform filtering
 Observed in real run:
-`XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:67`
+`out/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:67`
 ```text
 event=preflight.step.filtered ... qid=R_PORTS_1 | step=raqt_trait_impls | rows_before=221 | rows_after=0
 ```
 
 ### 2) Default-vs-explicit exclude precedence bugs
 Fix implemented:
-`XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2027`
+`run_pack.py:2027`
 ```python
 if "exclude_path_regex" in transform:
     exclude_path_regex = transform.get("exclude_path_regex")
@@ -103,7 +103,7 @@ else:
 
 ### 3) Need for richer run telemetry
 Enrichment implemented:
-`XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:3085`
+`run_pack.py:3085`
 ```python
 _log_event(logging.INFO, "preflight.step.filtered", ...)
 if _raw_count > 0 and _new_count == 0:
@@ -141,21 +141,21 @@ If someone asks "I know RAG, what is FCDRAG?":
 - Terms: [GLOSSARY.md](GLOSSARY.md)
 
 ## Source anchors
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TOPOLOGIES.md:9`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TOPOLOGIES.md:57`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TOPOLOGIES.md:189`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TOPOLOGIES.md:213`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:1291`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:1327`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:1425`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2027`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2413`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2463`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2941`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:3372`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:3476`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:3800`
-- `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_13_strand_opt/RUN_MANIFEST.json:35`
-- `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_13_strand_opt/GURU_METRICS.json:1`
-- `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:3`
-- `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:67`
+- `RAG_TOPOLOGIES.md:9`
+- `RAG_TOPOLOGIES.md:57`
+- `RAG_TOPOLOGIES.md:189`
+- `RAG_TOPOLOGIES.md:213`
+- `run_pack.py:1291`
+- `run_pack.py:1327`
+- `run_pack.py:1425`
+- `run_pack.py:2027`
+- `run_pack.py:2413`
+- `run_pack.py:2463`
+- `run_pack.py:2941`
+- `run_pack.py:3372`
+- `run_pack.py:3476`
+- `run_pack.py:3800`
+- `out/RAQT_MISSION_13_strand_opt/RUN_MANIFEST.json:35`
+- `out/RAQT_MISSION_13_strand_opt/GURU_METRICS.json:1`
+- `out/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:3`
+- `out/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:67`

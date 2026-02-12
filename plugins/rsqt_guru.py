@@ -10,21 +10,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 
+from core.validation import validate_response_schema as shared_validate_response_schema
 from .base import PackPlugin, PluginContext, PluginOutputs
-
-# Late import to avoid circular dependency at module level
-_validate_response_schema = None
-
-
-def _get_validate_response_schema():
-    """Lazy import of validate_response_schema from run_pack."""
-    global _validate_response_schema
-    if _validate_response_schema is None:
-        import importlib
-        mod = importlib.import_module("run_pack")
-        _validate_response_schema = mod.validate_response_schema
-    return _validate_response_schema
-
 
 # Evidence validators (ported from run_pack_rust.py)
 _CITATIONS_RE = re.compile(r"^\s*CITATIONS\s*[=:]\s*(.*)$", re.MULTILINE)
@@ -2785,8 +2772,7 @@ def _runner_issue_still_applies(msg: str, *, answer: str, validation: Any) -> bo
     )
     if issue.startswith(schema_like_prefixes):
         try:
-            vrs = _get_validate_response_schema()
-            current = set(vrs(answer or "", validation))
+            current = set(shared_validate_response_schema(answer or "", validation))
             return issue in current
         except Exception:
             # If SSOT validator unavailable, keep conservative behavior.
@@ -3832,8 +3818,7 @@ class RsqtGuruPlugin(PackPlugin):
             if prompt_has_schema:
                 # Use run_pack.validate_response_schema for SSOT scoring
                 try:
-                    vrs = _get_validate_response_schema()
-                    schema_issues = vrs(answer or "", ctx.pack.validation)
+                    schema_issues = shared_validate_response_schema(answer or "", ctx.pack.validation)
                     reasons.extend(schema_issues)
                 except Exception:
                     # Fallback to local checks if import fails

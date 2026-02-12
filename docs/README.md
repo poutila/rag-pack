@@ -3,7 +3,7 @@
 Specialist-LLM + deterministic evidence + contract-gated runner.
 
 ## Purpose
-Provide a repo-grounded map of the reusable FCDRAG framework in `XREF_WORKFLOW_II_new/tools/rag_packs` and link to operational docs.
+Provide a repo-grounded map of the reusable FCDRAG framework in `repo root` and link to operational docs.
 
 ## Audience
 Engineers and operators who run audits/question packs, tune grounding quality, or extend the runner.
@@ -41,7 +41,7 @@ See [RUNNER_GUIDE.md](RUNNER_GUIDE.md) for operational details and failure signa
 5. enforce response/citation/path validation
 6. emit run artifacts + optional plugin outputs
 
-Core behavior is in `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2103` and `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2733`.
+Core behavior is in `run_pack.py:2103` and `run_pack.py:2733`.
 
 ## Who it is for
 - Audit operators running RSQT/RAQT/MDParse packs
@@ -67,11 +67,11 @@ Use this exact sequence when you return to the project:
 1. Open `RUN_MANIFEST.json` for a known run directory and capture `pack path`, input hashes, repo commit, and plugin metrics.
 2. Open `RUN_LOG.txt` for the same run and confirm `run.start`, `run.prompts.selected`, `question.chat.prepare`, and `question.done` events.
 3. Open `REPORT.md` and `GURU_METRICS.json` to compare runner-level pass rate vs guru-level pass rate.
-4. Cross-check historical changes in `XREF_WORKFLOW_II_new/tools/rag_packs/OPTIMIZATION.md` and [RESEARCH_LOG.md](RESEARCH_LOG.md).
+4. Cross-check historical changes in `OPTIMIZATION.md` and [RESEARCH_LOG.md](RESEARCH_LOG.md).
 5. Re-run with the same pack/model/prompt files before changing defaults.
 
 Concrete reproducibility anchor from:
-`XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_13_strand_opt/RUN_MANIFEST.json:2`
+`out/RAQT_MISSION_13_strand_opt/RUN_MANIFEST.json:2`
 ```json
 {
   "schema_version": "1.1",
@@ -93,7 +93,7 @@ Concrete reproducibility anchor from:
 ```
 
 Concrete run-telemetry anchor from:
-`XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:3`
+`out/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:3`
 ```text
 event=run.start ... engine=raqt | backend=ollama | model=strand-iq4xs:latest
 event=run.prompts.selected ... grounding_prompt=...RUST_GURU_GROUNDING.md | analyze_prompt=...RUST_GURU_ANALYZE_ONLY.md
@@ -105,46 +105,46 @@ event=question.done ... qid=R_BOUNDARY_1 ... schema_issue_count=0
 
 | File | Purpose |
 |---|---|
-| `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py` | Runner core: CLI, orchestration, validation, artifacts, replicate mode |
-| `XREF_WORKFLOW_II_new/tools/rag_packs/runner_policy.yaml` | Externalized runner defaults, aliases, validation/prompt/evidence policies |
-| `XREF_WORKFLOW_II_new/tools/rag_packs/engine_specs.yaml` | Engine CLI wiring per backend tool (`rsqt`, `raqt`, `mdparse`) |
-| `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_rsqt_general_v1_6_explicit.yaml` | Main RSQT audit pack |
-| `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_rsqt_extension_3q.yaml` | RSQT extension 3-question pack |
-| `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt.yaml` | RAQT-first pack with RSQT engine overrides in preflight |
-| `XREF_WORKFLOW_II_new/tools/rag_packs/docs_audit_pack.explicit.yaml` | MDParse docs audit pack |
-| `XREF_WORKFLOW_II_new/tools/rag_packs/cfg_*_question_validators.yaml` | Question-level deterministic validator rules |
-| `XREF_WORKFLOW_II_new/tools/rag_packs/cfg_*_finding_rules.yaml` | Deterministic finding/recommendation rules |
-| `XREF_WORKFLOW_II_new/tools/rag_packs/plugins/base.py` | Plugin interface (`PackPlugin`, `PluginContext`, `PluginOutputs`) |
-| `XREF_WORKFLOW_II_new/tools/rag_packs/plugins/rsqt_guru.py` | Post-run deterministic findings + guru report/metrics pipeline |
-| `XREF_WORKFLOW_II_new/tools/rag_packs/prompts/RUST_GURU_SYSTEM.md` | Base system behavior and fail-closed semantics |
-| `XREF_WORKFLOW_II_new/tools/rag_packs/prompts/RUST_GURU_GROUNDING.md` | Grounding-mode constraints and citation contract |
-| `XREF_WORKFLOW_II_new/tools/rag_packs/prompts/RUST_GURU_ANALYZE_ONLY.md` | Analyze-only (quote-bypass) constraints |
+| `run_pack.py` | Runner core: CLI, orchestration, validation, artifacts, replicate mode |
+| `runner_policy.yaml` | Externalized runner defaults, aliases, validation/prompt/evidence policies |
+| `engine_specs.yaml` | Engine CLI wiring per backend tool (`rsqt`, `raqt`, `mdparse`) |
+| `pack_rust_audit_rsqt_general_v1_6_explicit.yaml` | Main RSQT audit pack |
+| `pack_rust_audit_rsqt_extension_4q.yaml` | RSQT extension 3-question pack |
+| `pack_rust_audit_raqt.yaml` | RAQT-first pack with RSQT engine overrides in preflight |
+| `docs_audit_pack.explicit.yaml` | MDParse docs audit pack |
+| `cfg_*_question_validators.yaml` | Question-level deterministic validator rules |
+| `cfg_*_finding_rules.yaml` | Deterministic finding/recommendation rules |
+| `plugins/base.py` | Plugin interface (`PackPlugin`, `PluginContext`, `PluginOutputs`) |
+| `plugins/rsqt_guru.py` | Post-run deterministic findings + guru report/metrics pipeline |
+| `prompts/RUST_GURU_SYSTEM.md` | Base system behavior and fail-closed semantics |
+| `prompts/RUST_GURU_GROUNDING.md` | Grounding-mode constraints and citation contract |
+| `prompts/RUST_GURU_ANALYZE_ONLY.md` | Analyze-only (quote-bypass) constraints |
 
 This inventory is reused throughout this doc set.
 
 ## Authoritative reference docs already in repo
 These are treated as authoritative and are cross-linked by this doc set:
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RUN_PACK_USER_MANUAL_v1_0.md`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RUN_PACK_CLI_CHEATSHEET.md`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/AUDIT_PACK_YAML_STRICT_SCHEMA_REFERENCE_v1_0.md`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/AUDIT_PACK_YAML_EXAMPLES_COOKBOOK_v1_0.md`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING.md`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING_MANUAL_RSQT_MDPARSE_v1_0.md`
+- `RUN_PACK_USER_MANUAL_v1_0.md`
+- `RUN_PACK_CLI_CHEATSHEET.md`
+- `AUDIT_PACK_YAML_STRICT_SCHEMA_REFERENCE_v1_0.md`
+- `AUDIT_PACK_YAML_EXAMPLES_COOKBOOK_v1_0.md`
+- `RAG_TUNING.md`
+- `RAG_TUNING_MANUAL_RSQT_MDPARSE_v1_0.md`
 
 ## Grounding notes
 - This FCDRAG doc set only claims behavior visible in files above.
 - `UNKNOWN/NOT FOUND`: exact parquet internal column schemas are not defined by `run_pack.py`; those are owned by engine tools and their manuals.
 
 ## Source anchors
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2103`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2733`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TOPOLOGIES.md:9`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TOPOLOGIES.md:57`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TOPOLOGIES.md:189`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TOPOLOGIES.md:213`
-- `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_13_strand_opt/RUN_MANIFEST.json:2`
-- `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:3`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/runner_policy.yaml:1`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/engine_specs.yaml:1`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/plugins/base.py:8`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/plugins/rsqt_guru.py:2671`
+- `run_pack.py:2103`
+- `run_pack.py:2733`
+- `RAG_TOPOLOGIES.md:9`
+- `RAG_TOPOLOGIES.md:57`
+- `RAG_TOPOLOGIES.md:189`
+- `RAG_TOPOLOGIES.md:213`
+- `out/RAQT_MISSION_13_strand_opt/RUN_MANIFEST.json:2`
+- `out/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:3`
+- `runner_policy.yaml:1`
+- `engine_specs.yaml:1`
+- `plugins/base.py:8`
+- `plugins/rsqt_guru.py:2671`

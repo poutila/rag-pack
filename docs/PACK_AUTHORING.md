@@ -10,9 +10,9 @@ Engineers creating or modifying audit/question packs.
 Read before editing any pack YAML; keep [AUDIT_PACK_YAML_STRICT_SCHEMA_REFERENCE_v1_0.md](../AUDIT_PACK_YAML_STRICT_SCHEMA_REFERENCE_v1_0.md) open in parallel.
 
 ## Canonical schema references
-- Strict schema: `XREF_WORKFLOW_II_new/tools/rag_packs/AUDIT_PACK_YAML_STRICT_SCHEMA_REFERENCE_v1_0.md`
-- Example patterns: `XREF_WORKFLOW_II_new/tools/rag_packs/AUDIT_PACK_YAML_EXAMPLES_COOKBOOK_v1_0.md`
-- Runtime parser/enforcement: `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:527`
+- Strict schema: `AUDIT_PACK_YAML_STRICT_SCHEMA_REFERENCE_v1_0.md`
+- Example patterns: `AUDIT_PACK_YAML_EXAMPLES_COOKBOOK_v1_0.md`
+- Runtime parser/enforcement: `run_pack.py:527`
 
 ## Required top-level keys
 
@@ -103,7 +103,7 @@ Current runtime precedence for excludes:
 2. otherwise inherit runner default `_default_exclude_path_regex`
 
 Concrete implementation excerpt:
-`XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2027`
+`run_pack.py:2027`
 ```python
 if "exclude_path_regex" in transform:
     exclude_path_regex = transform.get("exclude_path_regex")
@@ -116,7 +116,7 @@ Implication for pack authors:
 - omitting `exclude_path_regex` means "runner default excludes still apply".
 
 Recent run evidence of why this matters:
-`XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:66`
+`out/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:66`
 ```text
 event=preflight.step.filtered ... qid=R_PORTS_1 | step=raqt_traits | rows_before=18 | rows_after=0
 event=preflight.step.filtered ... qid=R_PORTS_1 | step=raqt_trait_impls | rows_before=221 | rows_after=0
@@ -263,20 +263,20 @@ runner:
 - Extension strategy: [EXTENDING_AND_PORTING.md](EXTENDING_AND_PORTING.md)
 
 ## Source anchors
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:527`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:560`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:572`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:1481`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2027`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2040`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:3085`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2167`
-- `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:66`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/AUDIT_PACK_YAML_STRICT_SCHEMA_REFERENCE_v1_0.md:43`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/AUDIT_PACK_YAML_STRICT_SCHEMA_REFERENCE_v1_0.md:141`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/AUDIT_PACK_YAML_EXAMPLES_COOKBOOK_v1_0.md:13`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/AUDIT_PACK_YAML_EXAMPLES_COOKBOOK_v1_0.md:43`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/AUDIT_PACK_YAML_EXAMPLES_COOKBOOK_v1_0.md:63`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt.yaml:1`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_rsqt_general_v1_6_explicit.yaml:1`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_rsqt_extension_3q.yaml:1`
+- `run_pack.py:527`
+- `run_pack.py:560`
+- `run_pack.py:572`
+- `run_pack.py:1481`
+- `run_pack.py:2027`
+- `run_pack.py:2040`
+- `run_pack.py:3085`
+- `run_pack.py:2167`
+- `out/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:66`
+- `AUDIT_PACK_YAML_STRICT_SCHEMA_REFERENCE_v1_0.md:43`
+- `AUDIT_PACK_YAML_STRICT_SCHEMA_REFERENCE_v1_0.md:141`
+- `AUDIT_PACK_YAML_EXAMPLES_COOKBOOK_v1_0.md:13`
+- `AUDIT_PACK_YAML_EXAMPLES_COOKBOOK_v1_0.md:43`
+- `AUDIT_PACK_YAML_EXAMPLES_COOKBOOK_v1_0.md:63`
+- `pack_rust_audit_raqt.yaml:1`
+- `pack_rust_audit_rsqt_general_v1_6_explicit.yaml:1`
+- `pack_rust_audit_rsqt_extension_4q.yaml:1`

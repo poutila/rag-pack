@@ -52,18 +52,18 @@ Use as a reference while reading [ARCHITECTURE.md](ARCHITECTURE.md), [PACK_AUTHO
 - Runner operations: [RUNNER_GUIDE.md](RUNNER_GUIDE.md)
 
 ## Source anchors
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TOPOLOGIES.md:9`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TOPOLOGIES.md:189`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TOPOLOGIES.md:213`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:501`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:1481`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:1801`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:1912`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:1968`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2370`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2460`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2664`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/plugins/base.py:26`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/plugins/rsqt_guru.py:2922`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/runner_policy.yaml:56`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/runner_policy.yaml:126`
+- `RAG_TOPOLOGIES.md:9`
+- `RAG_TOPOLOGIES.md:189`
+- `RAG_TOPOLOGIES.md:213`
+- `run_pack.py:501`
+- `run_pack.py:1481`
+- `run_pack.py:1801`
+- `run_pack.py:1912`
+- `run_pack.py:1968`
+- `run_pack.py:2370`
+- `run_pack.py:2460`
+- `run_pack.py:2664`
+- `plugins/base.py:26`
+- `plugins/rsqt_guru.py:2922`
+- `runner_policy.yaml:56`
+- `runner_policy.yaml:126`

@@ -5,7 +5,7 @@
 
 ## 1. Executive Summary
 - Audited tool: `raqt` (invoked as `uv run raqt ...`)
-- Audit run root: `/mnt/data/Dropbox/python/omat/rust/XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit_v26_20260211_015224`
+- Audit run root: `/mnt/data/Dropbox/python/omat/rust/audit_runs/raqt_tool_audit_v26_20260211_015224`
 - Tool version under test: `raqt 1.1.0` (`logs/s0_raqt_version.log`)
 - Trust grade: **WARN** (no critical fail-closed break found; some audit-surface and UX gaps remain)
 
@@ -16,7 +16,7 @@ Key outcomes:
 - The scripted Step 3/Step 4 symbol derivation assumed `work/src` + `work/tests`; this fixture is a workspace under `work/crates`, so some baseline ground-truth steps were initially `UNVERIFIABLE` and were supplemented.
 
 ## 2. Environment
-Evidence root: `/mnt/data/Dropbox/python/omat/rust/XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit_v26_20260211_015224/logs`
+Evidence root: `/mnt/data/Dropbox/python/omat/rust/audit_runs/raqt_tool_audit_v26_20260211_015224/logs`
 
 - OS: `Linux raju 6.17.0-14-generic ...` (`logs/s0_uname.log`)
 - `rustc`: `1.92.0` (`logs/s0_rustc.log`)
@@ -34,9 +34,9 @@ Trust values actually used for generation:
 
 ## 3. Fixture Setup
 - `FIXTURE_SRC=/home/lasse/Dropbox/python/omat/doxslock/tests/rsqt/rust` (`logs/run_env.txt`)
-- `AUDIT_ROOT=/mnt/data/Dropbox/python/omat/rust/XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit_v26_20260211_015224` (`AUDIT_PATHS.env`)
-- `WORK=/mnt/data/Dropbox/python/omat/rust/XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit_v26_20260211_015224/work` (`AUDIT_PATHS.env`)
-- `LOGS=/mnt/data/Dropbox/python/omat/rust/XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit_v26_20260211_015224/logs` (`AUDIT_PATHS.env`)
+- `AUDIT_ROOT=/mnt/data/Dropbox/python/omat/rust/audit_runs/raqt_tool_audit_v26_20260211_015224` (`AUDIT_PATHS.env`)
+- `WORK=/mnt/data/Dropbox/python/omat/rust/audit_runs/raqt_tool_audit_v26_20260211_015224/work` (`AUDIT_PATHS.env`)
+- `LOGS=/mnt/data/Dropbox/python/omat/rust/audit_runs/raqt_tool_audit_v26_20260211_015224/logs` (`AUDIT_PATHS.env`)
 
 Artifacts:
 - Rust files in copy: `107` (`logs/s1_rs_count.log`)
@@ -170,7 +170,7 @@ Global option checks:
 - Recommendation: if intended, document this explicitly; otherwise populate line anchors in callgraph projection.
 
 ## 9. Appendix: Raw Logs
-- Audit root: `/mnt/data/Dropbox/python/omat/rust/XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit_v26_20260211_015224`
+- Audit root: `/mnt/data/Dropbox/python/omat/rust/audit_runs/raqt_tool_audit_v26_20260211_015224`
 - Primary pointers:
   - `AUDIT_PATHS.env`
   - `logs/run_env.txt`

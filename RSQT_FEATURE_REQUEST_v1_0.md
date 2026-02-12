@@ -22,8 +22,8 @@ Observed evidence:
 - docs metadata versioning is ambiguous for provenance tracking.
 
 Primary evidence source:
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/rsqt_tool_audit/RSQT_TOOL_REPORT.md`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/rsqt_tool_audit/bug_reports/`
+- `audit_runs/rsqt_tool_audit/RSQT_TOOL_REPORT.md`
+- `audit_runs/rsqt_tool_audit/bug_reports/`
 
 ## Current limitations (evidence-backed)
 1. Missing-doc detection contract is weak:
@@ -153,8 +153,8 @@ Acceptance criteria:
 6. Implement FR-6 Rust audit persona profile.
 
 ## Related artifacts
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/rsqt_tool_audit/RSQT_TOOL_REPORT.md`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/rsqt_tool_audit/bug_reports/BUG_REPORTS_INDEX.md`
+- `audit_runs/rsqt_tool_audit/RSQT_TOOL_REPORT.md`
+- `audit_runs/rsqt_tool_audit/bug_reports/BUG_REPORTS_INDEX.md`
 - `/mnt/data/Dropbox/python/omat/doxslock/src/doxslock/rsqt/cli.py`
 - `/mnt/data/Dropbox/python/omat/doxslock/src/doxslock/rsqt/query.py`
 - `/mnt/data/Dropbox/python/omat/doxslock/src/doxslock/rag/base.py`

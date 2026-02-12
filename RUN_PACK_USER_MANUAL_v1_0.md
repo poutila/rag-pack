@@ -6,7 +6,7 @@
 ## Scope
 This manual documents how to use:
 
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`
+- `run_pack.py`
 
 It is based on runner behavior in `run_pack.py` version `3.2.0`.
 
@@ -49,7 +49,7 @@ When this gate fails, the run exits with code `2`.
 Recommended invocation style:
 
 ```bash
-uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py ...
+uv run python run_pack.py ...
 ```
 
 ---
@@ -59,31 +59,31 @@ uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py ...
 ### RSQT pack
 
 ```bash
-uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py \
-  --pack XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_rsqt_general_v1_6_explicit.yaml \
+uv run python run_pack.py \
+  --pack pack_rust_audit_rsqt_general_v1_6_explicit.yaml \
   --parquet RSQT.parquet \
   --index .rsqt.faiss \
-  --out-dir XREF_WORKFLOW_II_new/xref_state/RSQT_run_01
+  --out-dir out/RSQT_run_01
 ```
 
 ### RAQT pack
 
 ```bash
-uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py \
-  --pack XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt.yaml \
+uv run python run_pack.py \
+  --pack pack_rust_audit_raqt.yaml \
   --parquet RAQT.parquet \
   --index .raqt.faiss \
-  --out-dir XREF_WORKFLOW_II_new/xref_state/RAQT_run_01
+  --out-dir out/RAQT_run_01
 ```
 
 ### Replicate mode (stability)
 
 ```bash
-uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py \
-  --pack XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_rsqt_general_v1_6_explicit.yaml \
+uv run python run_pack.py \
+  --pack pack_rust_audit_rsqt_general_v1_6_explicit.yaml \
   --parquet RSQT.parquet \
   --index .rsqt.faiss \
-  --out-dir XREF_WORKFLOW_II_new/xref_state/RSQT_replicates \
+  --out-dir out/RSQT_replicates \
   --replicate \
   --replicate-seeds 42,123,456
 ```
@@ -157,8 +157,8 @@ Then it applies compatibility aliases from `runner_policy.yaml` `runner.path_ali
 Output directory behavior:
 
 - absolute path: used as-is.
-- relative multi-segment path (for example `XREF_WORKFLOW_II_new/xref_state/RAQT_9`): resolved from current working directory.
-- single-segment name (for example `RAQT_9`): created under default base (`XREF_WORKFLOW_II_new/xref_state`).
+- relative multi-segment path (for example `out/RAQT_9`): resolved from current working directory.
+- single-segment name (for example `RAQT_9`): created under default base (`out`).
 
 ---
 
@@ -166,7 +166,7 @@ Output directory behavior:
 
 ## Runner policy (`runner_policy.yaml`)
 
-- Default file: `XREF_WORKFLOW_II_new/tools/rag_packs/runner_policy.yaml`
+- Default file: `runner_policy.yaml`
 - Override with env var:
 
 ```bash
@@ -392,7 +392,7 @@ Note: individual preflight command failures are recorded in artifacts/report; th
 Use:
 
 ```bash
-uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py ...
+uv run python run_pack.py ...
 ```
 
 ## `Engine '...' not found in engine specs`

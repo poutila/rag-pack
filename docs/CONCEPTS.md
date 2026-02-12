@@ -47,7 +47,7 @@ Research notes show that model quality alone does not prevent grounding failures
 - Triggered by quote-bypass mode (`auto|on|off`) and evidence presence.
 
 Concrete runtime signal:
-`XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:3260`
+`run_pack.py:3260`
 ```python
 use_quote_bypass = (args._effective_qb_mode == "on") or (
     args._effective_qb_mode == "auto" and bool(evidence_blocks)
@@ -76,7 +76,7 @@ The explicit goal is mechanical fail-closed behavior. "NOT FOUND" and contract f
 `answer_mode=deterministic` and `answer_mode=llm` are materially different pipeline branches.
 
 Concrete implementation excerpt:
-`XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:3539`
+`run_pack.py:3539`
 ```python
 if STRICT_FAIL_ON_EMPTY_EVIDENCE and not evidence_blocks:
     # fail-fast abort: no evidence, no model/advice work
@@ -97,7 +97,7 @@ This means:
 When question config includes strict template + retry settings, the runner injects template constraints and optionally retries.
 
 Concrete code excerpt:
-`XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:3476`
+`run_pack.py:3476`
 ```python
 if retry_on_schema_fail and schema_retry_attempts > 0:
     for retry_idx in range(1, schema_retry_attempts + 1):
@@ -105,7 +105,7 @@ if retry_on_schema_fail and schema_retry_attempts > 0:
 ```
 
 Concrete run excerpt:
-`XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:38`
+`out/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:38`
 ```text
 event=question.chat.prepare ... strict_response_template=True | retry_on_schema_fail=True | schema_retry_attempts=2
 event=question.chat.schema_retry.satisfied ... attempt=0
@@ -131,20 +131,20 @@ The runner remains generic. Domain-specific deterministic post-processing is imp
 - Tuning outcomes: [RESEARCH_LOG.md](RESEARCH_LOG.md)
 
 ## Source anchors
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2234`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2370`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2460`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:3260`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:3308`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:3476`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:758`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:923`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:1021`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2658`
-- `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:38`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/prompts/RUST_GURU_GROUNDING.md:21`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/prompts/RUST_GURU_ANALYZE_ONLY.md:15`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING.md:45`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING.md:184`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING_MANUAL_RSQT_MDPARSE_v1_0.md:29`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING_MANUAL_RSQT_MDPARSE_v1_0.md:47`
+- `run_pack.py:2234`
+- `run_pack.py:2370`
+- `run_pack.py:2460`
+- `run_pack.py:3260`
+- `run_pack.py:3308`
+- `run_pack.py:3476`
+- `run_pack.py:758`
+- `run_pack.py:923`
+- `run_pack.py:1021`
+- `run_pack.py:2658`
+- `out/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:38`
+- `prompts/RUST_GURU_GROUNDING.md:21`
+- `prompts/RUST_GURU_ANALYZE_ONLY.md:15`
+- `RAG_TUNING.md:45`
+- `RAG_TUNING.md:184`
+- `RAG_TUNING_MANUAL_RSQT_MDPARSE_v1_0.md:29`
+- `RAG_TUNING_MANUAL_RSQT_MDPARSE_v1_0.md:47`

@@ -36,6 +36,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 
+from core.validation import validate_response_schema as shared_validate_response_schema
+
 # Ensure script directory is in sys.path for plugin imports
 _SCRIPT_DIR = Path(__file__).parent.resolve()
 if str(_SCRIPT_DIR) not in sys.path:
@@ -180,12 +182,12 @@ DEFAULT_RUNNER_POLICY: Dict[str, Any] = {
         },
         "path_aliases": {
             "rust_audit_pack_general_v1_6.explicit.yaml": "pack_rust_audit_rsqt_general_v1_6_explicit.yaml",
-            "rust_audit_extension_3q.yaml": "pack_rust_audit_rsqt_extension_3q.yaml",
+            "rust_audit_extension_4q.yaml": "pack_rust_audit_rsqt_extension_4q.yaml",
             "rust_audit_raqt.yaml": "pack_rust_audit_raqt.yaml",
             "rsqt_question_validators.yaml": "cfg_rust_audit_rsqt_general_question_validators.yaml",
             "rsqt_finding_rules.yaml": "cfg_rust_audit_rsqt_general_finding_rules.yaml",
-            "rsqt_question_validators_ext3q.yaml": "cfg_rust_audit_rsqt_extension_3q_question_validators.yaml",
-            "rsqt_finding_rules_ext3q.yaml": "cfg_rust_audit_rsqt_extension_3q_finding_rules.yaml",
+            "rsqt_question_validators_ext4q.yaml": "cfg_rust_audit_rsqt_extension_4q_question_validators.yaml",
+            "rsqt_finding_rules_ext4q.yaml": "cfg_rust_audit_rsqt_extension_4q_finding_rules.yaml",
             "rsqt_question_validators_raqt.yaml": "cfg_rust_audit_raqt_question_validators.yaml",
             "rsqt_finding_rules_raqt.yaml": "cfg_rust_audit_raqt_finding_rules.yaml",
         },
@@ -488,6 +490,17 @@ def _policy_get(path: str, default: Any = None) -> Any:
         cur = cur[part]
     return cur
 
+
+# Prefer external policy file shipped with the repo (SSOT) to avoid drift between
+# embedded DEFAULT_RUNNER_POLICY and runner_policy.yaml.
+_POLICY_FILE = Path(__file__).with_name("runner_policy.yaml")
+if _POLICY_FILE.exists():
+    try:
+        _obj = yaml.safe_load(_POLICY_FILE.read_text(encoding="utf-8"))
+        if isinstance(_obj, dict) and _obj:
+            DEFAULT_RUNNER_POLICY = _obj
+    except Exception:
+        pass
 
 _runner_policy_env = os.environ.get("RUNNER_POLICY_PATH")
 RUNNER_POLICY_PATH = Path(_runner_policy_env).expanduser() if _runner_policy_env else (_SCRIPT_DIR / "runner_policy.yaml")
@@ -1658,6 +1671,7 @@ class PackValidation:
     enforce_no_new_paths: bool = bool(PACK_VALIDATION_FALLBACK.get("enforce_no_new_paths", False))
     enforce_paths_must_be_cited: bool = bool(PACK_VALIDATION_FALLBACK.get("enforce_paths_must_be_cited", False))
     minimum_questions: int = int(PACK_VALIDATION_FALLBACK.get("minimum_questions", 0))
+    apply_question_validators: bool = bool(PACK_VALIDATION_FALLBACK.get("apply_question_validators", False))
 
 
 @dataclass(frozen=True)
@@ -1718,6 +1732,9 @@ def _parse_pack(obj: Dict[str, Any]) -> Pack:
             val_obj.get("enforce_paths_must_be_cited", PACK_VALIDATION_FALLBACK.get("enforce_paths_must_be_cited", False))
         ),
         minimum_questions=int(val_obj.get("minimum_questions") or PACK_VALIDATION_FALLBACK.get("minimum_questions", 0)),
+        apply_question_validators=bool(
+            val_obj.get("apply_question_validators", PACK_VALIDATION_FALLBACK.get("apply_question_validators", False))
+        ),
     )
 
     qs_obj = obj.get("questions")
@@ -2037,115 +2054,8 @@ def run_engine_chat(
 # =============================================================================
 
 def validate_response_schema(answer: str, validation: PackValidation) -> List[str]:
-    """Validate response against pack schema (BC-004: tolerant parsing)."""
-    issues: List[str] = []
-    required_verdicts = set(validation.required_verdicts)
-    fail_on_missing_citations = bool(validation.fail_on_missing_citations)
-
-    # Strip bold markers before parsing (BC-004)
-    clean = (answer or "").replace("**", "")
-    nonempty_lines = [ln.strip() for ln in clean.splitlines() if ln.strip()]
-
-    # Strict header order: first non-empty line must be VERDICT=..., second must be CITATIONS=...
-    if not nonempty_lines or not re.match(r"^VERDICT\s*[=:]\s*[A-Z_]+\s*$", nonempty_lines[0]):
-        issues.append("First non-empty line must be VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE")
-    if len(nonempty_lines) < 2 or not re.match(r"^CITATIONS\s*[=:]\s*.+$", nonempty_lines[1]):
-        issues.append("Second non-empty line must be CITATIONS=path:line(-line), ...")
-
-    # Disallow markdown-style/standalone section headers that often bypass schema while looking formatted.
-    bad_section_headers = re.findall(
-        r"(?mi)^\s*(?:#{1,6}\s*)?(?:analysis|citations)\s*:\s*$",
-        clean,
-    )
-    if bad_section_headers:
-        issues.append("Markdown/standalone 'Analysis:' or 'CITATIONS:' headers are not allowed")
-
-    verdict_matches = list(re.finditer(r"^\s*VERDICT\s*[=:]\s*([A-Z_]+)\s*$", clean, flags=re.MULTILINE))
-    if not verdict_matches:
-        issues.append("Missing required line: VERDICT=TRUE_POSITIVE|FALSE_POSITIVE|INDETERMINATE")
-    else:
-        verdict = verdict_matches[0].group(1)
-        if required_verdicts and verdict not in required_verdicts:
-            issues.append(f"Invalid VERDICT '{verdict}' (allowed: {sorted(required_verdicts)})")
-        if len(verdict_matches) > 1:
-            issues.append("VERDICT must appear exactly once")
-
-    citation_matches = list(re.finditer(r"^\s*CITATIONS\s*[=:]\s*(.*)$", clean, flags=re.MULTILINE))
-    m = citation_matches[0] if citation_matches else None
-    citations_raw = ""
-    if not m:
-        # Fallback: look for citation-like tokens after a bare CITATIONS header
-        cit_header = re.search(r"^\s*CITATIONS\s*[=:]?\s*$", clean, flags=re.MULTILINE)
-        if cit_header:
-            issues.append("CITATIONS must be a single comma-separated line (no standalone CITATIONS section)")
-            after = clean[cit_header.end():]
-            bullet_tokens = re.findall(r"(?:(?:file|path):)?[A-Za-z0-9_./\-]+:\d+(?:-\d+)?", after.split("\n\n")[0])
-            citations_raw = ", ".join(bullet_tokens)
-        if not citations_raw:
-            issues.append("Missing required line: CITATIONS=path:line(-line), ...")
-    else:
-        citations_raw = (m.group(1) or "").strip()
-        if len(citation_matches) > 1:
-            issues.append("CITATIONS must appear exactly once as a single line")
-
-    if fail_on_missing_citations and not citations_raw:
-        issues.append("CITATIONS is empty but fail_on_missing_citations=true")
-
-    if citations_raw:
-        def _normalize_citation_token(tok: str) -> str:
-            t = (tok or "").strip()
-            if not t:
-                return ""
-            # Strip common bullet prefixes
-            t = re.sub(r"^\s*[-*]\s+", "", t)
-            # Strip backticks
-            t = t.strip("`")
-            # Allow optional URI-ish prefix emitted by some models:
-            #   file:crates/foo.rs:12  -> crates/foo.rs:12
-            t = re.sub(r"^\s*file:\s*", "", t, flags=re.IGNORECASE)
-            # Some models echo schema docs literally:
-            #   path:crates/foo.rs:12  -> crates/foo.rs:12
-            t = re.sub(r"^\s*path:\s*", "", t, flags=re.IGNORECASE)
-            # Strip leading labels the model tends to echo
-            t = re.sub(r"^\s*artifact:\s*", "", t, flags=re.IGNORECASE)
-            t = re.sub(r"^\s*cite\s*=\s*", "", t, flags=re.IGNORECASE)
-            t = re.sub(r"^\s*section:\s*", "", t, flags=re.IGNORECASE)
-            # Strip trailing parenthetical annotations
-            t = re.sub(r"\s*\([^)]*\)\s*$", "", t)
-            # Normalize rsqt "file anchor" noise:
-            #   "path/to/Cargo.toml::file anchor 1:43" -> "path/to/Cargo.toml:1-43"
-            m_anchor = re.match(
-                r"^(?P<path>[^:]+)::file anchor\s+(?P<a>\d+):(?P<b>\d+)\s*$",
-                t, flags=re.IGNORECASE,
-            )
-            if m_anchor:
-                a = int(m_anchor.group("a"))
-                b = int(m_anchor.group("b"))
-                lo, hi = (a, b) if a <= b else (b, a)
-                t = f"{m_anchor.group('path')}:{lo}-{hi}"
-            # Guarded artifact token fix: "R_SAFE_3_unwrap_hits.json" → append ":1"
-            # Only matches generated artifact names (no slashes, no colon present).
-            if (":" not in t) and re.match(r"^R_[A-Z0-9_]+_[A-Za-z0-9_]+\.json$", t):
-                t = t + ":1"
-            return t.strip()
-
-        raw_tokens = [t.strip() for t in citations_raw.split(",") if t.strip()]
-        tokens = []
-        for t in raw_tokens:
-            nt = _normalize_citation_token(t)
-            if nt:
-                tokens.append(nt)
-
-        bad = []
-        for t in tokens:
-            if not re.match(r"^[^\s:]+(?:/[^\s:]+)*:\d+(?:-\d+)?$", t):
-                bad.append(t)
-        if bad:
-            issues.append(
-                f"CITATIONS contains invalid tokens (expected {validation.citation_format}): "
-                f"{bad[:int(ISSUE_CAPS.get('invalid_citations', 6))]}"
-            )
-    return issues
+    """Validate response against pack schema (shared implementation)."""
+    return shared_validate_response_schema(answer, validation, ISSUE_CAPS)
 
 
 # =============================================================================
@@ -3434,6 +3344,7 @@ def _compile_transform_regexes(
 
 
 _DEFAULT_TEST_PATTERNS_BY_PATH: Dict[str, List[str]] = {}
+_QUESTION_VALIDATORS_CFG_BY_PATH: Dict[str, Dict[str, Any]] = {}
 
 
 def _load_default_test_path_patterns(pack: "Pack", pack_path: Path) -> List[str]:
@@ -3468,10 +3379,94 @@ def _load_default_test_path_patterns(pack: "Pack", pack_path: Path) -> List[str]
                 if isinstance(d, dict) and isinstance(d.get("test_path_patterns"), list):
                     patterns = [str(x) for x in d["test_path_patterns"] if str(x).strip()]
         except Exception:
-            pass  # fail-open to fallback list
+            pass
 
     _DEFAULT_TEST_PATTERNS_BY_PATH[cache_key] = patterns
     return patterns
+
+
+def _load_question_validators_cfg(pack: "Pack", pack_path: Path) -> Dict[str, Any] | None:
+    runner = getattr(pack, "runner", {}) or {}
+    pcfg = runner.get("plugin_config") if isinstance(runner.get("plugin_config"), dict) else {}
+
+    vpath = pcfg.get("question_validators_path")
+    if vpath:
+        p = Path(str(vpath))
+        if not p.is_absolute():
+            p = (pack_path.parent / p).resolve()
+    else:
+        p = pack_path.with_name(QUESTION_VALIDATORS_DEFAULT_FILENAME)
+
+    cache_key = str(p)
+    if cache_key in _QUESTION_VALIDATORS_CFG_BY_PATH:
+        cfg = _QUESTION_VALIDATORS_CFG_BY_PATH[cache_key]
+        return cfg if cfg else None
+
+    cfg: Dict[str, Any] = {}
+    if p.exists():
+        try:
+            obj = yaml.safe_load(p.read_text(encoding="utf-8"))
+            if isinstance(obj, dict):
+                cfg = obj
+        except Exception:
+            cfg = {}
+
+    _QUESTION_VALIDATORS_CFG_BY_PATH[cache_key] = cfg
+    return cfg if cfg else None
+
+
+_RS_FILELINE_RE = re.compile(r"[A-Za-z0-9_.\-/]+\.rs:\d+(?:-\d+)?")
+
+
+def _apply_question_validators(*, qid: str, answer_text: str, cfg: Dict[str, Any], default_test_path_patterns: List[str]) -> List[str]:
+    if not answer_text or not isinstance(cfg, dict):
+        return []
+    validators = cfg.get("validators")
+    if not isinstance(validators, dict):
+        return []
+    rules = validators.get(qid)
+    if not isinstance(rules, list) or not rules:
+        return []
+    issues: List[str] = []
+    def _compile(pattern: str, *, label: str):
+        try:
+            return re.compile(str(pattern))
+        except Exception as e:
+            issues.append(f"{qid}: invalid {label} regex: {pattern!r} ({e})")
+            return None
+    for rule in rules:
+        if not isinstance(rule, dict):
+            continue
+        rtype = str(rule.get("type") or "").strip()
+        if rtype == "ban_regex":
+            cre = _compile(str(rule.get("regex") or ""), label="ban_regex.regex")
+            if cre and cre.search(answer_text):
+                issues.append(str(rule.get("message") or f"{qid}: banned regex matched"))
+        elif rtype == "require_min_inline_regex_count":
+            cre = _compile(str(rule.get("regex") or ""), label="require_min_inline_regex_count.regex")
+            min_count = int(rule.get("min_count") or 0)
+            if cre and sum(1 for _ in cre.finditer(answer_text)) < min_count:
+                issues.append(str(rule.get("message") or f"{qid}: require_min_inline_regex_count failed"))
+        elif rtype == "require_min_inline_regex_count_if_regex":
+            cif = _compile(str(rule.get("if_regex") or ""), label="require_min_inline_regex_count_if_regex.if_regex")
+            cre = _compile(str(rule.get("regex") or ""), label="require_min_inline_regex_count_if_regex.regex")
+            min_count = int(rule.get("min_count") or 0)
+            if cif and cre and cif.search(answer_text) and sum(1 for _ in cre.finditer(answer_text)) < min_count:
+                issues.append(str(rule.get("message") or f"{qid}: require_min_inline_regex_count_if_regex failed"))
+        elif rtype == "require_non_test_fileline_citations_if_regex":
+            ctrig = _compile(str(rule.get("trigger_regex") or ""), label="require_non_test_fileline_citations_if_regex.trigger_regex")
+            cclean = _compile(str(rule.get("clean_outcome_regex") or ""), label="require_non_test_fileline_citations_if_regex.clean_outcome_regex") if rule.get("clean_outcome_regex") else None
+            if ctrig and ctrig.search(answer_text):
+                hits = _RS_FILELINE_RE.findall(answer_text)
+                if not hits:
+                    issues.append(str(rule.get("message_no_citations") or f"{qid}: missing required non-test citations"))
+                    continue
+                test_pats = rule.get("test_path_patterns")
+                patterns = [str(x) for x in test_pats if str(x).strip()] if isinstance(test_pats, list) else list(default_test_path_patterns)
+                any_non_test = any(not _is_test_file(tok.split(":",1)[0], patterns=patterns) for tok in hits)
+                if not any_non_test and not (cclean and cclean.search(answer_text)):
+                    issues.append(str(rule.get("message_all_test") or f"{qid}: citations are all in test paths"))
+    return issues
 
 
 def _is_test_file(path: str, *, patterns: List[str]) -> bool:
@@ -4805,6 +4800,11 @@ def _run_single(
 
     # SSOT: load default test-path patterns once per run from validator YAML
     default_test_path_patterns = _load_default_test_path_patterns(pack, pack_path)
+    question_validators_cfg = (
+        _load_question_validators_cfg(pack, pack_path)
+        if pack.validation.apply_question_validators
+        else None
+    )
 
     report_lines: List[str] = []
     path_sample_items = max(1, int(getattr(args, "log_path_sample_items", DEFAULT_LOG_PATH_SAMPLE_ITEMS)))
@@ -5153,7 +5153,8 @@ def _run_single(
                 parquet_path=parquet_path,
                 env_overrides=step_env,
             )
-            stdout_data = parse_json_maybe(res.stdout) if ("--format" in cmd and "json" in cmd) else res.stdout
+            parsed_stdout = parse_json_maybe(res.stdout) if str(res.stdout).lstrip().startswith(("{", "[")) else None
+            stdout_data = parsed_stdout if parsed_stdout is not None else res.stdout
             _learn_runtime_keys_from_payload(stdout_data)
             stdout_row_est = len(_iter_rows(stdout_data)) if isinstance(stdout_data, (dict, list)) else 0
             art = {
@@ -6033,6 +6034,30 @@ def _run_single(
                 report_lines.append(f"- {sources}\n")
 
         schema_issues = _compute_schema_issues_local(ans or "")
+        if pack.validation.apply_question_validators and ans and question_validators_cfg:
+            qv_issues = _apply_question_validators(
+                qid=q.id,
+                answer_text=ans or "",
+                cfg=question_validators_cfg,
+                default_test_path_patterns=default_test_path_patterns,
+            )
+            if qv_issues:
+                schema_issues.extend(qv_issues)
+                _log_event(
+                    logging.WARNING,
+                    "question.qvalidators.issues",
+                    fn="_run_single",
+                    qid=q.id,
+                    issue_count=len(qv_issues),
+                    sample=qv_issues[:3],
+                )
+            else:
+                _log_event(
+                    logging.INFO,
+                    "question.qvalidators.ok",
+                    fn="_run_single",
+                    qid=q.id,
+                )
         if schema_issues:
             validator_section_opened = True
             report_lines.append("\n**Validator issues:**\n\n")

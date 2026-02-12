@@ -98,9 +98,9 @@ Keep architecture, replace domain primitives.
 
 ## 6) Audit-backed extension roadmap (RAQT/RSQT)
 Use these files as the current backlog SSOT:
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_FEATURE_REQUEST_v1_2.md`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_FEATURE_IMPLEMENTATION_CHECKLIST_v1_0.md`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RSQT_FEATURE_REQUEST_v1_0.md`
+- `RAQT_FEATURE_REQUEST_v1_2.md`
+- `RAQT_FEATURE_IMPLEMENTATION_CHECKLIST_v1_0.md`
+- `RSQT_FEATURE_REQUEST_v1_0.md`
 
 ### RAQT prioritized implementation map
 | Feature | Priority | Primary files | Estimated effort |
@@ -121,7 +121,7 @@ RSQT feature request currently defines priorities and sequencing, but no file-le
 - P1: output/schema versioning, CI deterministic profile
 - P2: Rust audit persona profile for RAG QA
 
-`UNKNOWN/NOT FOUND`: exact RSQT implementation effort by source file is not documented in `XREF_WORKFLOW_II_new/tools/rag_packs/RSQT_FEATURE_REQUEST_v1_0.md`; create an RSQT implementation checklist analogous to RAQT if planning execution tracking.
+`UNKNOWN/NOT FOUND`: exact RSQT implementation effort by source file is not documented in `RSQT_FEATURE_REQUEST_v1_0.md`; create an RSQT implementation checklist analogous to RAQT if planning execution tracking.
 
 ## Related docs
 - FCDRAG explainer: [FCDRAG.md](FCDRAG.md)
@@ -131,33 +131,33 @@ RSQT feature request currently defines priorities and sequencing, but no file-le
 - Research protocol: [RESEARCH_LOG.md](RESEARCH_LOG.md)
 
 ## Source anchors
-- `XREF_WORKFLOW_II_new/tools/rag_packs/engine_specs.yaml:1`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:618`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:674`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:688`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:527`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:1481`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2040`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/plugins/base.py:8`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/plugins/base.py:26`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/plugins/rsqt_guru.py:2566`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/plugins/rsqt_guru.py:2624`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/plugins/rsqt_guru.py:2690`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/plugins/rsqt_guru.py:2936`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/runner_policy.yaml:207`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_FEATURE_REQUEST_v1_2.md:44`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_FEATURE_REQUEST_v1_2.md:60`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_FEATURE_REQUEST_v1_2.md:73`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_FEATURE_REQUEST_v1_2.md:84`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_FEATURE_REQUEST_v1_2.md:95`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_FEATURE_REQUEST_v1_2.md:106`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_FEATURE_REQUEST_v1_2.md:117`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_FEATURE_IMPLEMENTATION_CHECKLIST_v1_0.md:12`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_FEATURE_IMPLEMENTATION_CHECKLIST_v1_0.md:198`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RSQT_FEATURE_REQUEST_v1_0.md:45`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RSQT_FEATURE_REQUEST_v1_0.md:60`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RSQT_FEATURE_REQUEST_v1_0.md:75`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RSQT_FEATURE_REQUEST_v1_0.md:88`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RSQT_FEATURE_REQUEST_v1_0.md:104`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RSQT_FEATURE_REQUEST_v1_0.md:119`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RSQT_FEATURE_REQUEST_v1_0.md:144`
+- `engine_specs.yaml:1`
+- `run_pack.py:618`
+- `run_pack.py:674`
+- `run_pack.py:688`
+- `run_pack.py:527`
+- `run_pack.py:1481`
+- `run_pack.py:2040`
+- `plugins/base.py:8`
+- `plugins/base.py:26`
+- `plugins/rsqt_guru.py:2566`
+- `plugins/rsqt_guru.py:2624`
+- `plugins/rsqt_guru.py:2690`
+- `plugins/rsqt_guru.py:2936`
+- `runner_policy.yaml:207`
+- `RAQT_FEATURE_REQUEST_v1_2.md:44`
+- `RAQT_FEATURE_REQUEST_v1_2.md:60`
+- `RAQT_FEATURE_REQUEST_v1_2.md:73`
+- `RAQT_FEATURE_REQUEST_v1_2.md:84`
+- `RAQT_FEATURE_REQUEST_v1_2.md:95`
+- `RAQT_FEATURE_REQUEST_v1_2.md:106`
+- `RAQT_FEATURE_REQUEST_v1_2.md:117`
+- `RAQT_FEATURE_IMPLEMENTATION_CHECKLIST_v1_0.md:12`
+- `RAQT_FEATURE_IMPLEMENTATION_CHECKLIST_v1_0.md:198`
+- `RSQT_FEATURE_REQUEST_v1_0.md:45`
+- `RSQT_FEATURE_REQUEST_v1_0.md:60`
+- `RSQT_FEATURE_REQUEST_v1_0.md:75`
+- `RSQT_FEATURE_REQUEST_v1_0.md:88`
+- `RSQT_FEATURE_REQUEST_v1_0.md:104`
+- `RSQT_FEATURE_REQUEST_v1_0.md:119`
+- `RSQT_FEATURE_REQUEST_v1_0.md:144`

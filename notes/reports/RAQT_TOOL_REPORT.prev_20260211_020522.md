@@ -36,9 +36,9 @@ Trust-gate env vars:
 - Fixture source (authoritative):
   - `/mnt/data/Dropbox/python/omat/rust/crates/engine`
 - Audit root:
-  - `/mnt/data/Dropbox/python/omat/rust/XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit`
+  - `/mnt/data/Dropbox/python/omat/rust/audit_runs/raqt_tool_audit`
 - Workspace copy used for execution:
-  - `/mnt/data/Dropbox/python/omat/rust/XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit/work`
+  - `/mnt/data/Dropbox/python/omat/rust/audit_runs/raqt_tool_audit/work`
 - Inventory:
   - Rust files: `75` (`s1_rs_count.log`)
   - `Cargo.toml` present in workspace (`s1_cargo_toml.log`)

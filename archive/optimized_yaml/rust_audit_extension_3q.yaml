@@ -354,5 +354,5 @@ validation:
 runner:
   plugin: rsqt_guru
   plugin_config:
-    rules_path: cfg_rust_audit_rsqt_extension_3q_finding_rules.yaml
-    question_validators_path: cfg_rust_audit_rsqt_extension_3q_question_validators.yaml
+    rules_path: cfg_rust_audit_rsqt_extension_4q_finding_rules.yaml
+    question_validators_path: cfg_rust_audit_rsqt_extension_4q_question_validators.yaml

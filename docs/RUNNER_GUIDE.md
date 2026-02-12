@@ -19,11 +19,11 @@ Canonical architecture term: `FCDRAG (Fail-Closed Deterministic Corrective RAG)`
 
 ## Baseline command
 ```bash
-uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py \
-  --pack XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_rsqt_general_v1_6_explicit.yaml \
+uv run python run_pack.py \
+  --pack pack_rust_audit_rsqt_general_v1_6_explicit.yaml \
   --parquet RSQT.parquet \
   --index .rsqt.faiss \
-  --out-dir XREF_WORKFLOW_II_new/xref_state/RSQT_run_01
+  --out-dir out/RSQT_run_01
 ```
 
 ## Core run controls
@@ -47,7 +47,7 @@ Mission packs (`pack_type` matching `mission`) are fail-closed for advice qualit
 - Praise-only/generic advice is rejected.
 
 Config source:
-- `XREF_WORKFLOW_II_new/tools/rag_packs/runner_policy.yaml` -> `runner.advice_quality_gate`
+- `runner_policy.yaml` -> `runner.advice_quality_gate`
 
 Run-log signals:
 - `event=question.advice.validator.ok`
@@ -57,14 +57,14 @@ Run-log signals:
 ## Path resolution and aliases
 For required paths (`--pack`, `--parquet`, `--index`, `--engine-specs`), resolution order is:
 1. current working directory
-2. script directory (`XREF_WORKFLOW_II_new/tools/rag_packs`)
+2. script directory (`repo root`)
 3. repository root
 4. compatibility aliases in `runner_policy.yaml` -> `runner.path_aliases`
 
 Out-dir resolution is different:
 - absolute path: used as-is
 - relative multi-segment path (or path starting with `.`): resolved from current working directory
-- single-segment name: created under default base `XREF_WORKFLOW_II_new/xref_state`
+- single-segment name: created under default base `out`
 
 ## Quote-bypass controls
 
@@ -82,11 +82,11 @@ If quote-bypass path is active but evidence is empty:
 ## Caching and short-circuiting
 Use during iterative tuning:
 ```bash
-uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py \
-  --pack XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt.yaml \
+uv run python run_pack.py \
+  --pack pack_rust_audit_raqt.yaml \
   --parquet RAQT.parquet \
   --index .raqt.faiss \
-  --out-dir XREF_WORKFLOW_II_new/xref_state/RAQT_cached \
+  --out-dir out/RAQT_cached \
   --cache-preflights \
   --short-circuit-preflights
 ```
@@ -94,22 +94,22 @@ uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py \
 ## Adaptive top-k rerun
 Use when contract failures happen at lower retrieval breadth:
 ```bash
-uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py \
-  --pack XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_raqt.yaml \
+uv run python run_pack.py \
+  --pack pack_rust_audit_raqt.yaml \
   --parquet RAQT.parquet \
   --index .raqt.faiss \
-  --out-dir XREF_WORKFLOW_II_new/xref_state/RAQT_adaptive \
+  --out-dir out/RAQT_adaptive \
   --adaptive-top-k \
   --chat-top-k-initial 8
 ```
 
 ## Replicate mode (stability)
 ```bash
-uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py \
-  --pack XREF_WORKFLOW_II_new/tools/rag_packs/pack_rust_audit_rsqt_general_v1_6_explicit.yaml \
+uv run python run_pack.py \
+  --pack pack_rust_audit_rsqt_general_v1_6_explicit.yaml \
   --parquet RSQT.parquet \
   --index .rsqt.faiss \
-  --out-dir XREF_WORKFLOW_II_new/xref_state/RSQT_replicates \
+  --out-dir out/RSQT_replicates \
   --replicate \
   --replicate-seeds 42,123,456
 ```
@@ -140,7 +140,7 @@ Key events:
 - `question.done`: timing and quality counters (`schema_retries`, `adaptive_reruns`, `citations_count`).
 
 Concrete excerpt from a recent run:
-`XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:3`
+`out/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:3`
 ```text
 event=run.start ... engine=raqt | backend=ollama | model=strand-iq4xs:latest
 event=run.prompts.selected ... grounding_prompt=...RUST_GURU_GROUNDING.md | analyze_prompt=...RUST_GURU_ANALYZE_ONLY.md
@@ -149,7 +149,7 @@ event=preflight.step.filtered ... qid=R_PORTS_1 | step=raqt_trait_impls | rows_b
 ```
 
 Concrete code excerpt for new filter diagnostics:
-`XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:3085`
+`run_pack.py:3085`
 ```python
 _log_event(logging.INFO, "preflight.step.filtered", ...)
 if _raw_count > 0 and _new_count == 0:
@@ -158,8 +158,8 @@ if _raw_count > 0 and _new_count == 0:
 
 Useful log queries:
 ```bash
-rg -n "event=run.start|event=run.prompts.selected|event=question.chat.prepare|event=question.done" XREF_WORKFLOW_II_new/xref_state/<RUN_DIR>/RUN_LOG.txt
-rg -n "event=preflight.step.filtered|event=preflight.step.filtered_to_zero" XREF_WORKFLOW_II_new/xref_state/<RUN_DIR>/RUN_LOG.txt
+rg -n "event=run.start|event=run.prompts.selected|event=question.chat.prepare|event=question.done" out/<RUN_DIR>/RUN_LOG.txt
+rg -n "event=preflight.step.filtered|event=preflight.step.filtered_to_zero" out/<RUN_DIR>/RUN_LOG.txt
 ```
 
 ## Troubleshooting
@@ -213,7 +213,7 @@ Fix:
 4. tighten `include_path_regex` to intended production paths to avoid broad zeroing.
 
 Concrete code precedence:
-`XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2027`
+`run_pack.py:2027`
 ```python
 if "exclude_path_regex" in transform:
     exclude_path_regex = transform.get("exclude_path_regex")
@@ -250,35 +250,35 @@ When strict audit confidence is required, treat these as risk controls and inclu
 - Research defaults: [RESEARCH_LOG.md](RESEARCH_LOG.md)
 
 ## Source anchors
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2733`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2796`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2802`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2818`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2836`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:1108`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:1209`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2863`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2027`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:3085`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:3372`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2167`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2178`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2209`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2460`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2664`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RUN_PACK_USER_MANUAL_v1_0.md:128`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RUN_PACK_USER_MANUAL_v1_0.md:38`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RUN_PACK_USER_MANUAL_v1_0.md:364`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RUN_PACK_CLI_CHEATSHEET.md:93`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/rsqt_tool_audit/RSQT_TOOL_REPORT.md:3`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/rsqt_tool_audit/RSQT_TOOL_REPORT.md:224`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/rsqt_tool_audit/RSQT_TOOL_REPORT.md:236`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/rsqt_tool_audit/RSQT_TOOL_REPORT.md:257`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/rsqt_tool_audit/bug_reports/BUG_REPORTS_INDEX.md:1`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_TOOL_REPORT.md:3`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_TOOL_REPORT.md:191`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_TOOL_REPORT.md:200`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_TOOL_REPORT.md:208`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_TOOL_REPORT.md:215`
-- `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:3`
-- `XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:66`
+- `run_pack.py:2733`
+- `run_pack.py:2796`
+- `run_pack.py:2802`
+- `run_pack.py:2818`
+- `run_pack.py:2836`
+- `run_pack.py:1108`
+- `run_pack.py:1209`
+- `run_pack.py:2863`
+- `run_pack.py:2027`
+- `run_pack.py:3085`
+- `run_pack.py:3372`
+- `run_pack.py:2167`
+- `run_pack.py:2178`
+- `run_pack.py:2209`
+- `run_pack.py:2460`
+- `run_pack.py:2664`
+- `RUN_PACK_USER_MANUAL_v1_0.md:128`
+- `RUN_PACK_USER_MANUAL_v1_0.md:38`
+- `RUN_PACK_USER_MANUAL_v1_0.md:364`
+- `RUN_PACK_CLI_CHEATSHEET.md:93`
+- `audit_runs/rsqt_tool_audit/RSQT_TOOL_REPORT.md:3`
+- `audit_runs/rsqt_tool_audit/RSQT_TOOL_REPORT.md:224`
+- `audit_runs/rsqt_tool_audit/RSQT_TOOL_REPORT.md:236`
+- `audit_runs/rsqt_tool_audit/RSQT_TOOL_REPORT.md:257`
+- `audit_runs/rsqt_tool_audit/bug_reports/BUG_REPORTS_INDEX.md:1`
+- `RAQT_TOOL_REPORT.md:3`
+- `RAQT_TOOL_REPORT.md:191`
+- `RAQT_TOOL_REPORT.md:200`
+- `RAQT_TOOL_REPORT.md:208`
+- `RAQT_TOOL_REPORT.md:215`
+- `out/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:3`
+- `out/RAQT_MISSION_13_strand_opt/RUN_LOG.txt:66`

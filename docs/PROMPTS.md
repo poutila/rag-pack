@@ -13,9 +13,9 @@ Read when changing prompt files or investigating behavior differences between st
 
 | File | Intended use |
 |---|---|
-| `XREF_WORKFLOW_II_new/tools/rag_packs/prompts/RUST_GURU_SYSTEM.md` | Base system policy language (grounding discipline, definition-first, fail-closed claims) |
-| `XREF_WORKFLOW_II_new/tools/rag_packs/prompts/RUST_GURU_GROUNDING.md` | Standard grounding mode contract and citation behavior |
-| `XREF_WORKFLOW_II_new/tools/rag_packs/prompts/RUST_GURU_ANALYZE_ONLY.md` | Analyze-only (quote-bypass) mode where deterministic evidence is authoritative |
+| `prompts/RUST_GURU_SYSTEM.md` | Base system policy language (grounding discipline, definition-first, fail-closed claims) |
+| `prompts/RUST_GURU_GROUNDING.md` | Standard grounding mode contract and citation behavior |
+| `prompts/RUST_GURU_ANALYZE_ONLY.md` | Analyze-only (quote-bypass) mode where deterministic evidence is authoritative |
 
 Runner defaults point to these files via `runner_policy.yaml`.
 
@@ -70,17 +70,17 @@ This lets you compare exact prompt content sent to engine chat.
 - Extension points: [EXTENDING_AND_PORTING.md](EXTENDING_AND_PORTING.md)
 
 ## Source anchors
-- `XREF_WORKFLOW_II_new/tools/rag_packs/runner_policy.yaml:28`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/runner_policy.yaml:29`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/runner_policy.yaml:30`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:1839`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:1847`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:1862`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:1912`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2377`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/prompts/RUST_GURU_SYSTEM.md:9`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/prompts/RUST_GURU_SYSTEM.md:19`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/prompts/RUST_GURU_GROUNDING.md:3`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/prompts/RUST_GURU_GROUNDING.md:31`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/prompts/RUST_GURU_ANALYZE_ONLY.md:3`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/prompts/RUST_GURU_ANALYZE_ONLY.md:15`
+- `runner_policy.yaml:28`
+- `runner_policy.yaml:29`
+- `runner_policy.yaml:30`
+- `run_pack.py:1839`
+- `run_pack.py:1847`
+- `run_pack.py:1862`
+- `run_pack.py:1912`
+- `run_pack.py:2377`
+- `prompts/RUST_GURU_SYSTEM.md:9`
+- `prompts/RUST_GURU_SYSTEM.md:19`
+- `prompts/RUST_GURU_GROUNDING.md:3`
+- `prompts/RUST_GURU_GROUNDING.md:31`
+- `prompts/RUST_GURU_ANALYZE_ONLY.md:3`
+- `prompts/RUST_GURU_ANALYZE_ONLY.md:15`

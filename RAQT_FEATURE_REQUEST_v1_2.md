@@ -148,8 +148,8 @@ Acceptance criteria:
 6. Add FR-7 doctor command and update manual.
 
 ## Related files
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_TOOL_REPORT.md`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAQT_FEATURE_REQUEST.md`
+- `RAQT_TOOL_REPORT.md`
+- `RAQT_FEATURE_REQUEST.md`
 - `/mnt/data/Dropbox/python/omat/doxslock/src/doxslock/raqt/collector_refs.py`
 - `/mnt/data/Dropbox/python/omat/doxslock/src/doxslock/raqt/query.py`
 - `/mnt/data/Dropbox/python/omat/doxslock/src/doxslock/rag/backends.py`

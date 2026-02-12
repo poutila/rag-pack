@@ -11,11 +11,11 @@ Read after [README.md](README.md) and [FCDRAG.md](FCDRAG.md), before [EXTENDING_
 
 ## System overview
 The architecture is a configurable pipeline driven by:
-- runner code: `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py`
-- policy defaults and aliases: `XREF_WORKFLOW_II_new/tools/rag_packs/runner_policy.yaml`
-- engine wiring: `XREF_WORKFLOW_II_new/tools/rag_packs/engine_specs.yaml`
+- runner code: `run_pack.py`
+- policy defaults and aliases: `runner_policy.yaml`
+- engine wiring: `engine_specs.yaml`
 - pack contract + preflights: `pack_*.yaml`
-- optional post-run plugins: `XREF_WORKFLOW_II_new/tools/rag_packs/plugins/*.py`
+- optional post-run plugins: `plugins/*.py`
 
 `run_pack.py` is intentionally generic; domain behavior is pushed to pack YAML and plugins.
 
@@ -133,21 +133,21 @@ Conditionally produced:
 - Extension points: [EXTENDING_AND_PORTING.md](EXTENDING_AND_PORTING.md)
 
 ## Source anchors
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TOPOLOGIES.md:9`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TOPOLOGIES.md:57`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TOPOLOGIES.md:189`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TOPOLOGIES.md:213`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2103`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2167`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2234`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2370`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2397`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2541`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2618`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2642`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/runner_policy.yaml:1`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/engine_specs.yaml:1`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/plugins/base.py:26`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/plugins/rsqt_guru.py:2690`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/plugins/rsqt_guru.py:2922`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/docs_audit_pack.explicit.yaml:485`
+- `RAG_TOPOLOGIES.md:9`
+- `RAG_TOPOLOGIES.md:57`
+- `RAG_TOPOLOGIES.md:189`
+- `RAG_TOPOLOGIES.md:213`
+- `run_pack.py:2103`
+- `run_pack.py:2167`
+- `run_pack.py:2234`
+- `run_pack.py:2370`
+- `run_pack.py:2397`
+- `run_pack.py:2541`
+- `run_pack.py:2618`
+- `run_pack.py:2642`
+- `runner_policy.yaml:1`
+- `engine_specs.yaml:1`
+- `plugins/base.py:26`
+- `plugins/rsqt_guru.py:2690`
+- `plugins/rsqt_guru.py:2922`
+- `docs_audit_pack.explicit.yaml:485`

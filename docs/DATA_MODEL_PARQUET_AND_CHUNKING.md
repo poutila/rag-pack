@@ -92,20 +92,20 @@ Current repo research indicates hybrid chunking is materially better than entiti
 - Research outcomes: [RESEARCH_LOG.md](RESEARCH_LOG.md)
 
 ## Source anchors
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:707`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:730`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2377`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2392`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py:2460`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING.md:18`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING.md:20`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING.md:319`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING.md:327`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING.md:334`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING.md:359`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING.md:395`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING_MANUAL_RSQT_MDPARSE_v1_0.md:29`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING_MANUAL_RSQT_MDPARSE_v1_0.md:34`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/RAG_TUNING.md:367`
+- `run_pack.py:707`
+- `run_pack.py:730`
+- `run_pack.py:2377`
+- `run_pack.py:2392`
+- `run_pack.py:2460`
+- `RAG_TUNING.md:18`
+- `RAG_TUNING.md:20`
+- `RAG_TUNING.md:319`
+- `RAG_TUNING.md:327`
+- `RAG_TUNING.md:334`
+- `RAG_TUNING.md:359`
+- `RAG_TUNING.md:395`
+- `RAG_TUNING_MANUAL_RSQT_MDPARSE_v1_0.md:29`
+- `RAG_TUNING_MANUAL_RSQT_MDPARSE_v1_0.md:34`
+- `RAG_TUNING.md:367`
 - `CLI_REFERENCE.md:1209`
 - `CLI_REFERENCE.md:1416`

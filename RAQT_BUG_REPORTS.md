@@ -18,7 +18,7 @@
 
 ### Reproduction
 ```bash
-AUDIT_ROOT="/mnt/data/Dropbox/python/omat/rust/XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit"
+AUDIT_ROOT="/mnt/data/Dropbox/python/omat/rust/audit_runs/raqt_tool_audit"
 WORK="$AUDIT_ROOT/work"
 
 export RUST_ANALYZER_PATH="$(command -v rust-analyzer)"
@@ -48,11 +48,11 @@ uv run raqt -t "$WORK" refs --to-def-id c1bf773b820dbb133219da598af3262516393fa8
 - For other IDs, results can be self-referential only.
 
 ### Evidence
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit/logs/fix_gt_avatar_fn_calls.log`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit/logs/fix_refs_from_compute.log`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit/logs/fix_refs_to_compute.log`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit/logs/fix_refs_from_selfid.log`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit/logs/fix_refs_to_selfid.log`
+- `audit_runs/raqt_tool_audit/logs/fix_gt_avatar_fn_calls.log`
+- `audit_runs/raqt_tool_audit/logs/fix_refs_from_compute.log`
+- `audit_runs/raqt_tool_audit/logs/fix_refs_to_compute.log`
+- `audit_runs/raqt_tool_audit/logs/fix_refs_from_selfid.log`
+- `audit_runs/raqt_tool_audit/logs/fix_refs_to_selfid.log`
 
 ### Impact
 Call-graph-driven Rust audit checks become untrustworthy.
@@ -80,7 +80,7 @@ When `--output` contains dotted suffixes, output files are written to the base s
 
 ### Reproduction
 ```bash
-WORK="/mnt/data/Dropbox/python/omat/rust/XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit/work"
+WORK="/mnt/data/Dropbox/python/omat/rust/audit_runs/raqt_tool_audit/work"
 cd "$WORK"
 
 uv run raqt rag-index RAQT.parquet -o /tmp/raqt_dot_out.function --symbol-kinds function
@@ -94,8 +94,8 @@ Outputs preserve full logical output basename (or documented deterministic mappi
 Files are written as `/tmp/raqt_dot_out.faiss`, `/tmp/raqt_dot_out.ids.json`, `/tmp/raqt_dot_out.meta` (suffix `.function` dropped).
 
 ### Evidence
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit/logs/fix_rag_index_dot_function.log`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit/logs/fix_rag_index_dot_function_files.log`
+- `audit_runs/raqt_tool_audit/logs/fix_rag_index_dot_function.log`
+- `audit_runs/raqt_tool_audit/logs/fix_rag_index_dot_function_files.log`
 
 ### Impact
 Different runs/variants can collide on the same output prefix and overwrite artifacts.
@@ -121,7 +121,7 @@ Different runs/variants can collide on the same output prefix and overwrite arti
 
 ### Reproduction
 ```bash
-WORK="/mnt/data/Dropbox/python/omat/rust/XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit/work"
+WORK="/mnt/data/Dropbox/python/omat/rust/audit_runs/raqt_tool_audit/work"
 cd "$WORK"
 
 uv run raqt rag-index RAQT.parquet -o /tmp/raqt_dot_out.fn --symbol-kinds fn
@@ -138,9 +138,9 @@ Either:
 - `function` indexes `755` chunks.
 
 ### Evidence
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit/logs/fix_rag_index_dot_fn.log`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit/logs/fix_rag_index_dot_function.log`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit/logs/s2_help_rag-index.log`
+- `audit_runs/raqt_tool_audit/logs/fix_rag_index_dot_fn.log`
+- `audit_runs/raqt_tool_audit/logs/fix_rag_index_dot_function.log`
+- `audit_runs/raqt_tool_audit/logs/s2_help_rag-index.log`
 
 ### Impact
 Silent under-indexing can invalidate downstream search/chat quality.
@@ -166,7 +166,7 @@ Semantic outputs do not provide reliable line anchors. `chat` and `rag-search` s
 
 ### Reproduction
 ```bash
-AUDIT_ROOT="/mnt/data/Dropbox/python/omat/rust/XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit"
+AUDIT_ROOT="/mnt/data/Dropbox/python/omat/rust/audit_runs/raqt_tool_audit"
 WORK="$AUDIT_ROOT/work"
 
 uv run raqt -t "$WORK" defs --kind function --format json | sed -n '1,40p'
@@ -183,10 +183,10 @@ uv run raqt rag-search struct --index "$WORK/.raqt.faiss" --raqt "$WORK/RAQT.par
 - `chat`/`rag-search` show line ranges as `0-0`.
 
 ### Evidence
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit/logs/fix_defs_fn_t.log`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit/logs/s4_chat_stub.log`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit/logs/s4_rag_search.log`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit/logs/fix_chat_syspromptfile_abs.log`
+- `audit_runs/raqt_tool_audit/logs/fix_defs_fn_t.log`
+- `audit_runs/raqt_tool_audit/logs/s4_chat_stub.log`
+- `audit_runs/raqt_tool_audit/logs/s4_rag_search.log`
+- `audit_runs/raqt_tool_audit/logs/fix_chat_syspromptfile_abs.log`
 
 ### Impact
 Weak source traceability for audit evidence and code review workflows.
@@ -212,7 +212,7 @@ Behavior differs significantly between implicit target resolution and explicit a
 
 ### Reproduction
 ```bash
-AUDIT_ROOT="/mnt/data/Dropbox/python/omat/rust/XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit"
+AUDIT_ROOT="/mnt/data/Dropbox/python/omat/rust/audit_runs/raqt_tool_audit"
 WORK="$AUDIT_ROOT/work"
 
 # Explicit target works
@@ -231,10 +231,10 @@ If current directory contains `RAQT.parquet`, implicit commands should target it
 Implicit resolution can point elsewhere and produce stale/not-found responses, while explicit absolute `-t` works for the same workspace.
 
 ### Evidence
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit/logs/s4_target_stats.log`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit/logs/s4_target_defs_count.log`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit/logs/s1_stats_base.log`
-- `XREF_WORKFLOW_II_new/tools/rag_packs/audit_runs/raqt_tool_audit/logs/fix_stats_t.log`
+- `audit_runs/raqt_tool_audit/logs/s4_target_stats.log`
+- `audit_runs/raqt_tool_audit/logs/s4_target_defs_count.log`
+- `audit_runs/raqt_tool_audit/logs/s1_stats_base.log`
+- `audit_runs/raqt_tool_audit/logs/fix_stats_t.log`
 
 ### Impact
 Operators can run correct-looking commands and get misleading failures, reducing confidence and increasing triage time.

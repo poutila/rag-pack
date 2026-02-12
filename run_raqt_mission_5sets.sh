@@ -7,7 +7,7 @@ set -euo pipefail
 # Any CLI args passed to this script are forwarded to run_pack.py.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+REPO_ROOT="${SCRIPT_DIR}"
 cd "${REPO_ROOT}"
 
 MODEL="${MODEL:-strand-iq4xs:latest}"
@@ -16,9 +16,9 @@ PARQUET="${PARQUET:-RAQT.parquet}"
 INDEX="${INDEX:-.raqt.faiss}"
 QUOTE_BYPASS_MODE="${QUOTE_BYPASS_MODE:-on}"
 CACHE_PREFLIGHTS="${CACHE_PREFLIGHTS:-1}"
-OUT_ROOT="${OUT_ROOT:-XREF_WORKFLOW_II_new/xref_state/RAQT_MISSION_5SETS_$(date +%y%m%d_%H%M%S)}"
+OUT_ROOT="${OUT_ROOT:-out/RAQT_MISSION_5SETS_$(date +%y%m%d_%H%M%S)}"
 
-PACK_DIR="XREF_WORKFLOW_II_new/tools/rag_packs"
+PACK_DIR="."
 PACKS=(
   "pack_rust_audit_raqt_mission_set1_v1_0.yaml"
   "pack_rust_audit_raqt_mission_set2_v1_0.yaml"
@@ -49,7 +49,7 @@ for pack in "${PACKS[@]}"; do
   out_dir="${OUT_ROOT}/${pack%.yaml}"
 
   cmd=(
-    uv run python XREF_WORKFLOW_II_new/tools/rag_packs/run_pack.py
+    uv run python ./run_pack.py
     --pack "${pack_path}"
     --parquet "${PARQUET}"
     --index "${INDEX}"
